@@ -15,7 +15,7 @@ def register(user: UserRegister, db: Session = Depends(get_db)):
 
     new_user = user_model.User(
         email=user.email,
-        hashed_password=hash_password(user.password)
+        password_hash=hash_password(user.password)
     )
     db.add(new_user)
     db.commit()
@@ -24,7 +24,7 @@ def register(user: UserRegister, db: Session = Depends(get_db)):
 @router.post("/login")
 def login(user: UserLogin, db: Session = Depends(get_db)):
     found = db.query(user_model.User).filter_by(email=user.email).first()
-    if not found or not verify_password(user.password, found.hashed_password):
+    if not found or not verify_password(user.password, found.password_hash):
         raise HTTPException(status_code=401, detail="Email hoặc mật khẩu không đúng")
     return {"message": "Đăng nhập thành công"}
 
@@ -49,7 +49,7 @@ def reset_password(payload: ResetPassword, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
 
-    user.hashed_password = hash_password(payload.new_password)
+    user.password_hash = hash_password(payload.new_password)
     db.commit()
     return {"message": "Đổi mật khẩu thành công"}
 
