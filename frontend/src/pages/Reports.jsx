@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Layout from '../components/Layout/Layout';
 
-const Dashboard = () => {
+const ReportPage = () => {
 
     return (
         <Layout>
@@ -10,4 +10,4 @@ const Dashboard = () => {
     )
 }
 
-export default Dashboard
+export default ReportPage;
