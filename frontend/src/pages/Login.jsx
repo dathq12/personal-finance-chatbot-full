@@ -1,62 +1,62 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Link } from 'react-router-dom';
-import axios from '../services/api';
+import API from '../services/api';
 
-function Login() {
-    console.log("Login component rendered");
+import LogoIcon from '../components/Authen/LogoIcon';
+import AuthHeader from '../components/Authen/AuthHeader';
+import TextInput from '../components/Authen/TextInput';
+import CheckboxWithLabel from '../components/Authen/CheckboxWithLabel';
+import SubmitButton from '../components/Authen/SubmitButton';
+import AuthFooter from '../components/Authen/AuthFooter';
+
+
+
+const Login = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    email: '',
-    password: ''
-  });
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
 
     try {
-      const res = await axios.post('/auth/login', form);
-      localStorage.setItem('token', res.data.access_token);
-      navigate('/dashboard');
-    } catch (error) {
-      alert('Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
+      // const res = await API.post('/auth/login', { email, password });
+      // localStorage.setItem('token', res.data.token);
+      navigate('/chatbot');
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Đăng nhập thất bại.');
     }
   };
 
   return (
-    <div className="auth-container">
-      <h2>Đăng nhập</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={handleChange}
-          required
-        />
-        <input
-          type="password"
-          name="password"
-          placeholder="Mật khẩu"
-          value={form.password}
-          onChange={handleChange}
-          required
-        />
-        <button type="submit">Đăng nhập</button>
-      </form>
-      <p>
-  Chưa có tài khoản? <Link to="/register">Đăng ký</Link>
-</p>
-<p>
-  <Link to="/forgot-password">Quên mật khẩu?</Link>
-</p>
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
+      <div className="max-w-md w-full bg-white p-8 rounded-xl shadow">
+        <LogoIcon />
+        <AuthHeader title="Chào mừng trở lại" />
+
+        {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <TextInput type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <TextInput type="password" placeholder="Mật khẩu" value={password} onChange={(e) => setPassword(e.target.value)} />
+
+          <div className="flex items-center justify-between">
+            <CheckboxWithLabel label="Ghi nhớ tôi" checked={rememberMe} onChange={() => setRememberMe(!rememberMe)} />
+            <a href="/forgot-password" className="text-sm text-blue-600 hover:underline">Quên mật khẩu?</a>
+          </div>
+
+          <SubmitButton label="Đăng Nhập" />
+        </form>
+
+        <p className="text-center text-sm text-gray-600 mt-6">
+          <AuthFooter question="Chưa có tài khoản?" linkText="Đăng ký" linkHref="/register" />
+        </p>
+      </div>
     </div>
   );
-}
+};
 
 export default Login;

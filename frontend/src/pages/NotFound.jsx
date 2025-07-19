@@ -7,7 +7,7 @@ function NotFound() {
     <div style={styles.container}>
       <h1 style={styles.code}>404</h1>
       <p style={styles.message}>Trang bạn tìm kiếm không tồn tại.</p>
-      <Link to="/" style={styles.link}>Quay về trang chủ</Link>
+      <Link to="/dashboard" style={styles.link}>Quay về trang chủ</Link>
     </div>
   );
 }
