@@ -1,1 +1,0 @@
-# expense_schema.py
