@@ -2,7 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.routes import auth_routes, chatbot_routes, category_routes, budget_routes, income_routes, expense_routes
+from app.routes import auth_routes, chatbot_routes, category_routes, budget_routes, transaction_routes,user_routes
+from backend.app.routes import transaction_routes
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -28,5 +29,5 @@ app.include_router(auth_routes.router)
 app.include_router(chatbot_routes.router)
 app.include_router(category_routes.router)
 app.include_router(budget_routes.router)
-app.include_router(income_routes.router)
-app.include_router(expense_routes.router)
+app.include_router(transaction_routes.router)
+app.include_router(user_routes.router)
