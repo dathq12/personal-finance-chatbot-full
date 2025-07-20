@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
+import { useEffect } from 'react';
 
 import LogoIcon from '../components/Authen/LogoIcon';
 import AuthHeader from '../components/Authen/AuthHeader';
@@ -18,9 +19,27 @@ const Login = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+    useEffect(() => {
+    const saved  = localStorage.getItem('rememberedAccount');
+    if (saved) {
+      const parsed = JSON.parse(atob(saved));
+      setEmail(parsed.email);
+      setPassword(parsed.password);
+      setRememberMe(true);
+    }
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (rememberMe) {
+      const encoded = btoa(JSON.stringify({ email, password }));
+      localStorage.setItem('rememberedAccount', encoded);
+    } else {
+      localStorage.removeItem('rememberedAccount');
+    }
+
 
     try {
       // const res = await API.post('/auth/login', { email, password });
