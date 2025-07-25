@@ -237,3 +237,24 @@ class TransactionCRUD:
             .order_by(desc(Transaction.TransactionDate))
             .all()
         )
+    
+    #Cập nhật save_chat_message (25/7/25 Sơn)
+    def save_chat_message(db: Session, user_id: str, session_id: str, question: str, answer: str, intent: str = None, entities: dict = None, confidence_score: float = None):
+    chat_message = ChatMessage(
+        session_id=session_id,
+        user_id=user_id,
+        message_type="user" if question else "bot",
+        content=question if question else answer,
+        intent=intent,
+        entities=entities,
+        confidence_score=confidence_score,
+        action_taken="recorded" if intent == "record_transaction" else None
+    )
+    db.add(chat_message)
+    db.commit()
+    # Cập nhật MessageCount trong ChatSession
+    session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
+    if session:
+        session.message_count += 1
+        db.commit()
+    return chat_message

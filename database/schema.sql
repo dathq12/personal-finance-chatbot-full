@@ -325,3 +325,17 @@ INSERT INTO Categories (CategoryName, CategoryType, ParentCategoryID, Icon, IsDe
 ('Chứng khoán', 'expense', @InvestmentID, 'chart-line', 1, 2),
 ('Bất động sản', 'expense', @InvestmentID, 'building', 1, 3),
 ('Bảo hiểm', 'expense', @InvestmentID, 'shield', 1, 4);
+
+-- Thêm bảng ChatbotTrainingData (25/7/25 Sơn)
+-- ===================================================================
+CREATE TABLE ChatbotTrainingData (
+    TrainingID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    UserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID) ON DELETE CASCADE,
+    Question NVARCHAR(MAX) NOT NULL,
+    Intent NVARCHAR(50) NOT NULL,
+    Entities NVARCHAR(MAX),
+    ConfidenceScore FLOAT,
+    Timestamp DATETIME2 DEFAULT GETDATE()
+);
+
+CREATE INDEX IX_ChatbotTrainingData_User ON ChatbotTrainingData(UserID);
