@@ -135,6 +135,8 @@ CREATE TABLE ChatMessages (
     MessageType NVARCHAR(20) NOT NULL CHECK (MessageType IN ('user', 'bot', 'system')),
     Content NVARCHAR(MAX) NOT NULL,
     Intent NVARCHAR(50),
+    Entities NVARCHAR(MAX), -- Thêm trường Entities để lưu thực thể (JSON format) (7/27 Sơn)
+    ConfidenceScore FLOAT, -- Thêm trường ConfidenceScore để lưu độ tin cậy (7/27 Sơn)
     ActionTaken NVARCHAR(50),
     CreatedAt DATETIME2 DEFAULT GETDATE()
 );
