@@ -22,4 +22,15 @@ class ChatMessage(Base):
     Content = Column(String, nullable=False)
     Intent = Column(String(50))
     ActionTaken = Column(String(50))
-    CreatedAt = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    CreatedAt = Column(DateTime, default=datetime.utcnow)
+
+# thêm ChatbotTrainingData (25/7/25 Sơn)
+class ChatbotTrainingData(Base):
+    __tablename__ = "chatbot_training_data"
+    id = Column("TrainingID", String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column("UserID", String, ForeignKey("users.UserID"), nullable=False)
+    question = Column("Question", Text, nullable=False)
+    intent = Column("Intent", String(50), nullable=False)
+    entities = Column("Entities", Text)
+    confidence_score = Column("ConfidenceScore", Float)
+    timestamp = Column("Timestamp", DateTime, default=datetime.utcnow)

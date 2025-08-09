@@ -158,6 +158,8 @@ CREATE TABLE ChatMessages (
     MessageType NVARCHAR(20) NOT NULL CHECK (MessageType IN ('user', 'bot', 'system')),
     Content NVARCHAR(MAX) NOT NULL,
     Intent NVARCHAR(50),
+    Entities NVARCHAR(MAX), -- Thêm trường Entities để lưu thực thể (JSON format) (7/27 Sơn)
+    ConfidenceScore FLOAT, -- Thêm trường ConfidenceScore để lưu độ tin cậy (7/27 Sơn)
     ActionTaken NVARCHAR(50),
     CreatedAt DATETIME2 DEFAULT GETDATE()
 );
@@ -333,3 +335,17 @@ BEGIN
     GROUP BY b.BudgetID, b.BudgetName, b.Amount, b.AlertThreshold;
 END;
 
+
+-- Thêm bảng ChatbotTrainingData (25/7/25 Sơn)
+-- ===================================================================
+CREATE TABLE ChatbotTrainingData (
+    TrainingID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    UserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID) ON DELETE CASCADE,
+    Question NVARCHAR(MAX) NOT NULL,
+    Intent NVARCHAR(50) NOT NULL,
+    Entities NVARCHAR(MAX),
+    ConfidenceScore FLOAT,
+    Timestamp DATETIME2 DEFAULT GETDATE()
+);
+
+CREATE INDEX IX_ChatbotTrainingData_User ON ChatbotTrainingData(UserID);

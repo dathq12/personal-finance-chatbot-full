@@ -1,31 +1,13 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import NotFound from './pages/NotFound';
+import { BrowserRouter as Router } from 'react-router-dom';
+import AppRoutes from './AppRoutes'; // import file vừa tạo
 
 function App() {
-  console.log("App component rendered");
-    return (
+  return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <AppRoutes />
     </Router>
   );
 }
-
-// function App() {
-//   return (
-//     <div>
-//       <h1>Hello World</h1>
-//     </div>
-//   );
-// }
 
 export default App;

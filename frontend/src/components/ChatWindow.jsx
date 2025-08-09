@@ -1,1 +1,0 @@
-// ChatWindow.jsx - Placeholder content

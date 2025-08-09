@@ -376,27 +376,3 @@ def delete_transaction(db: Session, transaction_id: UUID, user_id: UUID) -> bool
     db.commit()
     return True
 
-def get_transaction_summary(db: Session, user_id: UUID, date_from: Optional[date] = None, date_to: Optional[date] = None):
-    """Get transaction summary for a user within date range"""
-    query = db.query(Transaction).filter(Transaction.UserID == user_id)
-    
-    if date_from:
-        query = query.filter(Transaction.TransactionDate >= date_from)
-    if date_to:
-        query = query.filter(Transaction.TransactionDate <= date_to)
-    
-    summary = query.with_entities(
-        func.sum(func.case((Transaction.TransactionType == 'income', Transaction.Amount), else_=0)).label('total_income'),
-        func.sum(func.case((Transaction.TransactionType == 'expense', Transaction.Amount), else_=0)).label('total_expense'),
-        func.count(Transaction.TransactionID).label('total_transactions')
-    ).first()
-    
-    total_income = summary.total_income or 0
-    total_expense = summary.total_expense or 0
-    
-    return {
-        'total_income': total_income,
-        'total_expense': total_expense,
-        'net_amount': total_income - total_expense,
-        'total_transactions': summary.total_transactions or 0
-    }

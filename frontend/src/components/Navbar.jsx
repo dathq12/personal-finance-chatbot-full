@@ -1,1 +1,0 @@
-// Navbar.jsx - Placeholder content
