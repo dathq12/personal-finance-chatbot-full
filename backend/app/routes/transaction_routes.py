@@ -11,10 +11,11 @@ from schemas.transaction_schema import (
     TransactionCreate, 
     TransactionUpdate, 
     TransactionResponse, 
-    TransactionSummary,
+    TransactionListResponse,
     TransactionFilter
 )
-from crud.transaction_crud import TransactionCRUD
+from crud import transaction_crud as crud_transaction
+from  crud.category_crud import get_category_display_name
 from auth.auth_dependency import get_current_user  
 
 router = APIRouter(
@@ -23,174 +24,90 @@ router = APIRouter(
     dependencies=[Depends(HTTPBearer())]
 )
 
-# Helper function to get transaction CRUD
-def get_transaction_crud(db: Session = Depends(get_db)) -> TransactionCRUD:
-    return TransactionCRUD(db)
-
 @router.post("/", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)
-async def create_transaction(
+def create_transaction(
     transaction: TransactionCreate,
-    current_user = Depends(get_current_user),
-    transaction_crud: TransactionCRUD = Depends(get_transaction_crud)
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
 ):
-    """Create a new transaction"""
-    try:
-        db_transaction = transaction_crud.create(current_user.id, transaction)
-        return db_transaction
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to create transaction: {str(e)}"
-        )
 
-@router.get("/", response_model=List[TransactionResponse])
-async def get_transactions(
-    skip: int = Query(0, ge=0, description="Number of transactions to skip"),
-    limit: int = Query(100, ge=1, le=500, description="Maximum number of transactions to return"),
-    order_by: str = Query("transaction_date", description="Field to order by"),
-    order_dir: str = Query("desc", regex="^(asc|desc)$", description="Order direction"),
-    current_user = Depends(get_current_user),
-    transaction_crud: TransactionCRUD = Depends(get_transaction_crud)
-):
-    """Get user's transactions with pagination and sorting"""
-    transactions = transaction_crud.get_by_user(
-        current_user.id, 
-        skip=skip, 
-        limit=limit,
-        order_by=order_by,
-        order_dir=order_dir
+    # Create transaction
+    created_transaction = crud_transaction.create_transaction(
+        db=db,
+        transaction_data=transaction,
+        user_id=current_user.UserID,
     )
-    return transactions
+    
+    return created_transaction
 
-@router.get("/search", response_model=dict)
-async def search_transactions(
-    category_id: Optional[UUID] = Query(None),
-    transaction_type: Optional[str] = Query(None, regex="^(income|expense)$"),
-    start_date: Optional[date] = Query(None),
-    end_date: Optional[date] = Query(None),
-    min_amount: Optional[float] = Query(None, ge=0),
-    max_amount: Optional[float] = Query(None, ge=0),
-    payment_method: Optional[str] = Query(None),
-    is_recurring: Optional[bool] = Query(None),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
-    current_user = Depends(get_current_user),
-    transaction_crud: TransactionCRUD = Depends(get_transaction_crud)
+@router.get("/", response_model=TransactionListResponse)
+def get_transactions(
+    transaction_type: Optional[str] = Query(None, description="Filter by transaction type: 'income' or 'expense'"),
+    category_display_name: Optional[str] = Query(None, description="Filter by category display name"),
+    payment_method: Optional[str] = Query(None, description="Filter by payment method"),
+    location: Optional[str] = Query(None, description="Filter by location"),
+    date_from: Optional[date] = Query(None, description="Filter by start date"),
+    date_to: Optional[date] = Query(None, description="Filter by end date"),
+    amount_min: Optional[float] = Query(None, description="Filter by minimum amount"),
+    amount_max: Optional[float] = Query(None, description="Filter by maximum amount"),
+    search: Optional[str] = Query(None, description="Search transactions by description or notes"),
+    created_by: Optional[str] = Query(None, regex ="^(manual|chatbot)$", description="Filter by transaction creator: 'manual' or 'chatbot'"),
+
+    skip: int = Query(0, ge=0, description="Number of transactions to skip for pagination"),
+    limit: int = Query(10, ge=1, le=100, description="Number of transactions to return per page"),
+
+    sort_by: Optional[str] = Query("created_at", description="Field to sort by, e.g., 'amount', 'transaction_date'"),
+    sort_order: Optional[str] = Query("desc", regex="^(asc|desc)$", description="Sort order: 'asc' for ascending, 'desc' for descending"),
+
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
 ):
-    """Search and filter transactions"""
+    """Get a list of transactions with optional filters, pagination, and sorting."""
+    # Validate transaction type
+    if transaction_type and transaction_type.lower() not in ['income', 'expense']:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid transaction type. Must be 'income' or 'expense'.")
+
+    # Validate created_by
+    if created_by and created_by.lower() not in ['manual', 'chatbot']:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid created_by value. Must be 'manual' or 'chatbot'.")
+
+    # Get transactions with filters, pagination, and sorting
     filters = TransactionFilter(
-        category_id=category_id,
         transaction_type=transaction_type,
-        start_date=start_date,
-        end_date=end_date,
-        min_amount=min_amount,
-        max_amount=max_amount,
+        category_display_name=category_display_name,
         payment_method=payment_method,
-        is_recurring=is_recurring
+        location= location,
+        date_from=date_from,
+        date_to=date_to,
+        amount_min=amount_min,
+        amount_max=amount_max,
+        search=search,
+        created_by=created_by,
+        skip=skip,
+        limit=limit,
+        order_by=sort_by,
+        sort_order=sort_order
+        )
+    return crud_transaction.get_transactions(
+        db=db,
+        user_id=current_user.UserID,
+        filters=filters
     )
-    
-    transactions, total = transaction_crud.get_filtered(
-        current_user.id, 
-        filters, 
-        skip=skip, 
-        limit=limit
-    )
-    
-    return {
-        "transactions": transactions,
-        "total": total,
-        "skip": skip,
-        "limit": limit,
-        "has_more": skip + limit < total
-    }
-
-@router.get("/summary", response_model=TransactionSummary)
-async def get_transaction_summary(
-    start_date: Optional[date] = Query(None),
-    end_date: Optional[date] = Query(None),
-    current_user = Depends(get_current_user),
-    transaction_crud: TransactionCRUD = Depends(get_transaction_crud)
-):
-    """Get transaction summary for user"""
-    summary = transaction_crud.get_summary(current_user.id, start_date, end_date)
-    return summary
-
-@router.get("/recurring", response_model=List[TransactionResponse])
-async def get_recurring_transactions(
-    current_user = Depends(get_current_user),
-    transaction_crud: TransactionCRUD = Depends(get_transaction_crud)
-):
-    """Get all recurring transactions"""
-    transactions = transaction_crud.get_recurring(current_user.id)
-    return transactions
-
-@router.get("/category/{category_id}", response_model=List[TransactionResponse])
-async def get_transactions_by_category(
-    category_id: UUID,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
-    current_user = Depends(get_current_user),
-    transaction_crud: TransactionCRUD = Depends(get_transaction_crud)
-):
-    """Get transactions by category"""
-    transactions = transaction_crud.get_by_category(
-        current_user.id, 
-        category_id, 
-        skip=skip, 
-        limit=limit
-    )
-    return transactions
-
 @router.get("/{transaction_id}", response_model=TransactionResponse)
-async def get_transaction(
+def get_transaction(
     transaction_id: UUID,
-    current_user = Depends(get_current_user),
-    transaction_crud: TransactionCRUD = Depends(get_transaction_crud)
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
 ):
-    """Get specific transaction"""
-    transaction = transaction_crud.get_by_id(transaction_id)
-    if not transaction:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Transaction not found"
-        )
+    """Get a single transaction by ID."""
+    transaction = crud_transaction.get_transaction_by_id(
+        db=db,
+        transaction_id=transaction_id,
+        user_id=current_user.UserID
+    )
     
-    # Check if transaction belongs to current user
-    if transaction.UserID != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this transaction"
-        )
+    if not transaction:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
     
     return transaction
 
-@router.put("/{transaction_id}", response_model=TransactionResponse)
-async def update_transaction(
-    transaction_id: UUID,
-    updates: TransactionUpdate,
-    current_user = Depends(get_current_user),
-    transaction_crud: TransactionCRUD = Depends(get_transaction_crud)
-):
-    """Update transaction"""
-    transaction = transaction_crud.update(transaction_id, current_user.id, updates)
-    if not transaction:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Transaction not found or not authorized"
-        )
-    return transaction
-
-@router.delete("/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_transaction(
-    transaction_id: UUID,
-    current_user = Depends(get_current_user),
-    transaction_crud: TransactionCRUD = Depends(get_transaction_crud)
-):
-    """Delete transaction"""
-    success = transaction_crud.delete(transaction_id, current_user.id)
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Transaction not found or not authorized"
-        )
-    return None

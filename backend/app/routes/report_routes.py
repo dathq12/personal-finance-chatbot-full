@@ -10,7 +10,7 @@ from schemas.report_schema import (
     FinancialOverview, FinancialOverviewRequest
 )
 from crud.report_crud import ReportCRUD
-from dependencies import get_current_user  # Giả sử bạn có authentication
+from auth.auth_dependency import get_current_user  # Giả sử bạn có authentication
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 

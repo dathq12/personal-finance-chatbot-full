@@ -9,173 +9,38 @@ import uuid
 
 # ==================== CATEGORY CRUD ====================
 
-def create_category(db: Session, category: CategoryCreate) -> Category:
-    """Tạo danh mục mới"""
-    category_data = category.dict()
-    category_data['CategoryID'] = str(uuid.uuid4())
-    
-    # Convert field names to match database
-    db_category = Category(
-        CategoryID=category_data['CategoryID'],
-        CategoryName=category_data['category_name'],
-        CategoryType=category_data['category_type'],
-        ParentCategoryID=category_data.get('parent_category_id'),
-        Description=category_data.get('description'),
-        Icon=category_data.get('icon'),
-        Color=category_data.get('color'),
-        IsDefault=category_data.get('is_default', False),
-        SortOrder=category_data.get('sort_order', 0)
-    )
-    
-    db.add(db_category)
-    db.commit()
-    db.refresh(db_category)
-    return db_category
-
-def get_category(db: Session, category_id: UUID) -> Optional[Category]:
-    """Lấy danh mục theo ID"""
-    return db.query(Category).filter(Category.CategoryID == str(category_id)).first()
-
-def get_category_with_children(db: Session, category_id: UUID) -> Optional[Category]:
-    """Lấy danh mục với các danh mục con"""
-    return db.query(Category).options(
-        joinedload(Category.children)
-    ).filter(Category.CategoryID == str(category_id)).first()
-
-def get_categories(
-    db: Session, 
-    skip: int = 0, 
-    limit: int = 100,
-    category_type: Optional[str] = None,
-    is_active: Optional[bool] = None,
-    parent_id: Optional[UUID] = None,
-    search: Optional[str] = None,
-    sort_by: str = "sort_order",
-    sort_order: str = "asc"
-) -> List[Category]:
-    """Lấy danh sách danh mục với các bộ lọc"""
-    query = db.query(Category)
-    
-    # Apply filters
-    if category_type:
-        query = query.filter(Category.CategoryType == category_type)
-    
-    if is_active is not None:
-        query = query.filter(Category.IsActive == is_active)
-    
-    if parent_id:
-        query = query.filter(Category.ParentCategoryID == str(parent_id))
-    elif parent_id is False:  # Get root categories only
-        query = query.filter(Category.ParentCategoryID.is_(None))
-    
-    if search:
-        search_term = f"%{search}%"
-        query = query.filter(
-            or_(
-                Category.CategoryName.ilike(search_term),
-                Category.Description.ilike(search_term)
-            )
-        )
-    
-    # Apply sorting
-    if sort_order.lower() == "desc":
-        query = query.order_by(desc(getattr(Category, _get_sort_column(sort_by))))
-    else:
-        query = query.order_by(asc(getattr(Category, _get_sort_column(sort_by))))
-    
-    return query.offset(skip).limit(limit).all()
-
-def get_categories_count(
-    db: Session,
-    category_type: Optional[str] = None,
-    is_active: Optional[bool] = None,
-    parent_id: Optional[UUID] = None,
-    search: Optional[str] = None
-) -> int:
-    """Đếm số lượng danh mục"""
-    query = db.query(Category)
-    
-    if category_type:
-        query = query.filter(Category.CategoryType == category_type)
-    
-    if is_active is not None:
-        query = query.filter(Category.IsActive == is_active)
-    
-    if parent_id:
-        query = query.filter(Category.ParentCategoryID == str(parent_id))
-    elif parent_id is False:
-        query = query.filter(Category.ParentCategoryID.is_(None))
-    
-    if search:
-        search_term = f"%{search}%"
-        query = query.filter(
-            or_(
-                Category.CategoryName.ilike(search_term),
-                Category.Description.ilike(search_term)
-            )
-        )
-    
-    return query.count()
-
-def get_category_tree(db: Session, category_type: Optional[str] = None) -> List[Category]:
-    """Lấy cây danh mục (chỉ danh mục gốc với con)"""
-    query = db.query(Category).options(
-        joinedload(Category.children)
-    ).filter(Category.ParentCategoryID.is_(None))
-    
-    if category_type:
-        query = query.filter(Category.CategoryType == category_type)
-    
-    return query.order_by(Category.SortOrder).all()
-
-def update_category(db: Session, category_id: UUID, updates: CategoryUpdate) -> Optional[Category]:
-    """Cập nhật danh mục"""
-    db_category = db.query(Category).filter(Category.CategoryID == str(category_id)).first()
-    
-    if not db_category:
-        return None
-    
-    update_data = updates.dict(exclude_unset=True)
-    field_mapping = {
-        'category_name': 'CategoryName',
-        'category_type': 'CategoryType',
-        'parent_category_id': 'ParentCategoryID',
-        'description': 'Description',
-        'icon': 'Icon',
-        'color': 'Color',
-        'is_default': 'IsDefault',
-        'is_active': 'IsActive',
-        'sort_order': 'SortOrder'
-    }
-    
-    for field, value in update_data.items():
-        if field in field_mapping:
-            db_field = field_mapping[field]
-            if field == 'parent_category_id' and value:
-                value = str(value)
-            setattr(db_category, db_field, value)
-    
-    db.commit()
-    db.refresh(db_category)
-    return db_category
-
-def delete_category(db: Session, category_id: UUID, soft_delete: bool = True) -> bool:
-    """Xóa danh mục (soft delete hoặc hard delete)"""
-    db_category = db.query(Category).filter(Category.CategoryID == str(category_id)).first()
-    
-    if not db_category:
-        return False
-    
-    if soft_delete:
-        db_category.IsActive = False
-        db.commit()
-    else:
-        db.delete(db_category)
-        db.commit()
-    
-    return True
 
 # ==================== USER CATEGORY CRUD ====================
+
+def get_all_category_display_names(db: Session, user_id: UUID) -> list[str]:
+    """Lấy toàn bộ tên danh mục (custom hoặc mặc định) của một người"""
+    results = (
+        db.query(UserCategory, Category)
+        .join(Category, UserCategory.CategoryID == Category.CategoryID)
+        .filter(UserCategory.UserID == user_id, UserCategory.IsActive == True)
+        .all()
+    )
+    
+    display_names = []
+    for user_category, category in results:
+        display_names.append(user_category.CustomName if user_category.CustomName else category.CategoryName)
+    
+    return display_names
+
+def get_category_display_name(db: Session, user_category_id: UUID) -> str:
+    """Get the display name of a user category"""
+    result = (
+        db.query(UserCategory, Category)
+        .join(Category, UserCategory.CategoryID == Category.CategoryID)
+        .filter(UserCategory.UserCategoryID == user_category_id)
+        .first()
+    )
+    if not result:
+        return "Unknown Category"
+    user_category, category = result
+    return user_category.CustomName if user_category.CustomName else category.CategoryName
+
+
 
 def create_user_category(db: Session, user_category: UserCategoryCreate) -> UserCategory:
     """Tạo liên kết user-category"""
@@ -307,34 +172,3 @@ def delete_user_category(db: Session, user_category_id: UUID, soft_delete: bool 
         db.commit()
     
     return True
-
-# ==================== HELPER FUNCTIONS ====================
-
-def _get_sort_column(sort_by: str) -> str:
-    """Map sort field names to database column names"""
-    sort_mapping = {
-        'category_name': 'CategoryName',
-        'category_type': 'CategoryType',
-        'sort_order': 'SortOrder',
-        'created_at': 'CreatedAt',
-        'is_active': 'IsActive'
-    }
-    return sort_mapping.get(sort_by, 'SortOrder')
-
-def get_categories_by_type(db: Session, category_type: str) -> List[Category]:
-    """Lấy danh mục theo loại"""
-    return db.query(Category).filter(
-        and_(
-            Category.CategoryType == category_type,
-            Category.IsActive == True
-        )
-    ).order_by(Category.SortOrder).all()
-
-def get_default_categories(db: Session) -> List[Category]:
-    """Lấy danh mục mặc định"""
-    return db.query(Category).filter(
-        and_(
-            Category.IsDefault == True,
-            Category.IsActive == True
-        )
-    ).order_by(Category.SortOrder).all()

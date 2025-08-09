@@ -1,22 +1,19 @@
-import os
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from app.config import settings
 import urllib
 
-# Load environment variables
-# load_dotenv()
+params = urllib.parse.quote_plus(
+    "DRIVER={ODBC Driver 17 for SQL Server};"
+    "SERVER=DESKTOP-2SS6FHK\\SQLEXPRESS;"
+    "DATABASE=FinanceChatbotDB;"
+    "Trusted_Connection=yes;"
+)
 
-# Build connection string
-# params = urllib.parse.quote_plus(
-#     "DRIVER={ODBC Driver 17 for SQL Server};"
-#     "SERVER=DESKTOP-SO4EPRT;"
-#     "DATABASE=FinanceChatbotDB;"
-#     "UID=dathq12;"
-#     "PWD=dathq12"
-# )
-params = urllib.parse.quote_plus(settings.DATABASE_URL)
+# Lấy URL kết nối từ biến môi trường
+# params = urllib.parse.quote_plus(settings.DATABASE_URL)
+
+
 # Kết nối qua pyodbc
 DATABASE_URL = f"mssql+pyodbc:///?odbc_connect={params}"
 

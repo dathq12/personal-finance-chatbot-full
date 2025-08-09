@@ -7,21 +7,14 @@ from decimal import Decimal
 import json
 
 class TransactionBase(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    
-    category_id: UUID = Field(..., description="Category ID for the transaction")
     transaction_type: str = Field(..., description="Type of transaction: 'income' or 'expense'")
     amount: Decimal = Field(..., gt=0, description="Transaction amount (must be positive)")
     description: Optional[str] = Field(None, max_length=500, description="Transaction description")
     transaction_date: date = Field(..., description="Date of the transaction")
     transaction_time: Optional[time] = Field(None, description="Time of the transaction")
     payment_method: Optional[str] = Field(None, max_length=50, description="Payment method used")
-    location: Optional[str] = Field(None, max_length=255, description="Transaction location")
-    tags: Optional[List[str]] = Field(None, description="Tags for categorization")
-    receipt_url: Optional[str] = Field(None, max_length=500, description="URL to receipt image/document")
-    notes: Optional[str] = Field(None, description="Additional notes")
-    is_recurring: bool = Field(False, description="Whether transaction is recurring")
-    recurring_pattern: Optional[str] = Field(None, description="Recurring pattern (JSON)")
+    location: Optional[str] = Field(None, max_length=255, description="Location of the transaction")
+    notes: Optional[str] = Field(None, max_length=500, description="Additional notes for the transaction")
     created_by: str = Field("manual", max_length=20, description="How the transaction was created")
 
     @field_validator('transaction_type')
@@ -30,14 +23,7 @@ class TransactionBase(BaseModel):
         if v.lower() not in ['income', 'expense']:
             raise ValueError('Transaction type must be either "income" or "expense"')
         return v.lower()
-    
-    @field_validator('tags')
-    @classmethod
-    def validate_tags(cls, v: Optional[List[str]]) -> Optional[List[str]]:
-        if v and len(v) > 10:
-            raise ValueError('Maximum 10 tags allowed')
-        return v
-    
+        
     @field_validator('amount')
     @classmethod
     def validate_amount(cls, v: Decimal) -> Decimal:
@@ -46,12 +32,9 @@ class TransactionBase(BaseModel):
         return v
 
 class TransactionCreate(TransactionBase):
-    pass
+    category_display_name: str = Field(..., max_length = 100, description = "Display name of the category")
 
 class TransactionUpdate(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    
-    category_id: Optional[UUID] = None
     transaction_type: Optional[str] = None
     amount: Optional[Decimal] = None
     description: Optional[str] = Field(None, max_length=500)
@@ -59,11 +42,8 @@ class TransactionUpdate(BaseModel):
     transaction_time: Optional[time] = None
     payment_method: Optional[str] = Field(None, max_length=50)
     location: Optional[str] = Field(None, max_length=255)
-    tags: Optional[List[str]] = None
-    receipt_url: Optional[str] = Field(None, max_length=500)
     notes: Optional[str] = None
-    is_recurring: Optional[bool] = None
-    recurring_pattern: Optional[str] = None
+    category_display_name: Optional[str] = Field(None, max_length=100, description="Display name of the category")
     
     @field_validator('transaction_type')
     @classmethod
@@ -71,13 +51,6 @@ class TransactionUpdate(BaseModel):
         if v and v.lower() not in ['income', 'expense']:
             raise ValueError('Transaction type must be either "income" or "expense"')
         return v.lower() if v else v
-    
-    @field_validator('tags')
-    @classmethod
-    def validate_tags(cls, v: Optional[List[str]]) -> Optional[List[str]]:
-        if v and len(v) > 10:
-            raise ValueError('Maximum 10 tags allowed')
-        return v
     
     @field_validator('amount')
     @classmethod
@@ -87,60 +60,70 @@ class TransactionUpdate(BaseModel):
         return v
 
 class TransactionResponse(BaseModel):
-    model_config = ConfigDict(
-        from_attributes=True,
-        json_encoders={
-            Decimal: float,
-            UUID: str
-        }
-    )
-    
-    transaction_id: UUID
-    user_id: UUID
-    category_id: UUID
-    transaction_type: str
-    amount: Decimal
-    description: Optional[str]
-    transaction_date: date
-    transaction_time: Optional[time]
-    payment_method: Optional[str]
-    location: Optional[str]
-    tags: Optional[List[str]]
-    receipt_url: Optional[str]
-    notes: Optional[str]
-    is_recurring: bool
-    recurring_pattern: Optional[str]
-    created_at: datetime
-    updated_at: datetime
-    created_by: str
-    
-    @field_validator('tags', mode='before')
-    @classmethod
-    def parse_tags(cls, v) -> Optional[List[str]]:
-        if isinstance(v, str) and v:
-            try:
-                return json.loads(v)
-            except json.JSONDecodeError:
-                return [v]  # Single tag as string
-        return v
-
-class TransactionSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
-    total_income: Decimal
-    total_expense: Decimal
-    net_amount: Decimal
-    transaction_count: int
+
+    TransactionID: UUID = Field(..., description="Unique identifier for the transaction")
+    UserID: UUID
+    UserCategoryID: UUID
+    transaction_type: str = Field(..., description="Type of transaction: 'income' or 'expense'")
+    amount: Decimal = Field(..., description="Transaction amount")
+    description: Optional[str] = Field(None, description="Transaction description")
+    transaction_date: date = Field(..., description="Date of the transaction")
+    transaction_time: Optional[time] = Field(None, description="Time of the transaction")
+    payment_method: Optional[str] = Field(None, description="Payment method used")
+    location: Optional[str] = Field(None, description="Location of the transaction")
+    notes: Optional[str] = Field(None, description="Additional notes for the transaction")
+    created_by: str = Field(..., description="How the transaction was created")
+    category_display_name: str = Field(..., description="Display name of the category")
+    CreatedAt: datetime
+    UpdatedAt: Optional[datetime] = None
+
+class TransactionListResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    transaction: List[TransactionResponse] = Field(..., description="List of transactions")
+    total_count: int = Field(..., description="Total number of transactions")
+    total_income: Decimal = Field(..., description="Total income from transactions")
+    total_expense: Decimal = Field(..., description="Total expense from transactions")
+    net_amount: Decimal = Field(..., description="Net amount (income - expense)")
 
 class TransactionFilter(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    
-    category_id: Optional[UUID] = None
     transaction_type: Optional[str] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
-    min_amount: Optional[Decimal] = None
-    max_amount: Optional[Decimal] = None
+    category_display_name: Optional[str] = None
     payment_method: Optional[str] = None
-    tags: Optional[List[str]] = None
-    is_recurring: Optional[bool] = None
+    location: Optional[str] = None
+    date_from: Optional[date] = None
+    date_to: Optional[date] = None
+    amount_min: Optional[Decimal] = None
+    amount_max: Optional[Decimal] = None
+    search: Optional[str] = None # Search in description, notes, etc.
+    created_by: Optional[str] = None #'manual'or 'imported'
+
+    #Pagination
+    skip: int = Field(0, ge=0, description="Number of records to skip")
+    limit: int = Field(100, ge=1, le=500, description="Maximum number of records to return")
+
+    # Sorting
+    order_by: Optional[str] = Field("transaction_date", description="Field to order by")
+    sort_order: Optional[str] = Field("desc", description="Order direction")
+
+    @field_validator('transaction_type')
+    @classmethod
+    def validate_transaction_type(cls, v: Optional[str]) -> Optional[str]:
+        if v and v.lower() not in ['income', 'expense']:
+            raise ValueError('Transaction type must be either "income" or "expense"')
+        return v.lower() if v else v
+    
+    @field_validator('created_by')
+    @classmethod
+    def validate_created_by(cls, v: Optional[str]) -> Optional[str]:
+        if v and v.lower() not in ['manual', 'imported']:
+            raise ValueError('Created by must be either "manual" or "imported"')
+        return v.lower() if v else v
+    
+    @field_validator('sort_order')
+    @classmethod
+    def validate_sort_order(cls,v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in ['asc', 'desc']:
+            raise ValueError('Sort order must be either "asc" or "desc"')
+        return v
