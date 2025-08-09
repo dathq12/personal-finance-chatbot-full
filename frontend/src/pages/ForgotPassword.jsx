@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
 
-import LogoIcon from '../components/Authen/LogoIcon';
+import LogoIcon from '../components/ui/LogoIcon';
 import AuthHeader from '../components/Authen/AuthHeader';
 import TextInput from '../components/Authen/TextInput';
 import SubmitButton from '../components/Authen/SubmitButton';
+import { Input } from '../components/ui/input';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -27,16 +28,17 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
-      <div className="max-w-md w-full bg-white p-8 rounded-xl shadow">
-        <LogoIcon />
-        <AuthHeader title="Quên mật khẩu? 🔒" />
-
+    <div className="p-6 bg-black text-white min-h-screen space-y-6 flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-[#121212] p-8 rounded-xl shadow">
+        <div className="flex items-end justify-center space-x-2 mb-6">
+          <LogoIcon />
+          <AuthHeader title="Quên mật khẩu? 🔒" />
+        </div>
         {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
         {successMsg && <p className="text-green-600 text-sm text-center mb-4">{successMsg}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <TextInput
+          <Input
             type="email"
             placeholder="Địa chỉ email"
             value={email}

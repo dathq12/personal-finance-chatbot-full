@@ -12,6 +12,8 @@ import ManualEntry from "./pages/ManualEntry.jsx";
 import ReportPage from "./pages/Reports.jsx"
 import Dashboard from "./pages/Dashboard.jsx"
 import Account from "./pages/Account.jsx"
+import Budget from "./pages/Budget.jsx";
+import Analytics from "./pages/Analytics.jsx";
 
 function AppRoutes() {
   return (
@@ -27,6 +29,8 @@ function AppRoutes() {
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/account" element={<Account />} />
       <Route path="*" element={<NotFound />} />
+      <Route path="/budget" element={<Budget />} />
+      <Route path="/analytics" element={<Analytics />} />
     </Routes>
   );
 }
