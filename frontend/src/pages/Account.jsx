@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Layout from '../components/Layout/Layout';
-import LogoIcon from '../components/Authen/LogoIcon';
+import LogoIcon from '../components/ui/LogoIcon';
 
 const Account = () => {
   const [user, setUser] = useState({
@@ -22,14 +22,14 @@ const Account = () => {
 
   return (
     <Layout>
-        <div className="flex flex-col flex-1 bg-white px-6 py-8 text-left">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Tài khoản của bạn</h2>
+        <div className="flex flex-col flex-1 bg-black px-6 py-8 text-left">
+      <h2 className="text-2xl font-bold text-white mb-6">Tài khoản của bạn</h2>
 
       {/* Avatar + info */}
       <div className="flex items-center space-x-4 mb-8">
         <LogoIcon/>
         <div>
-          <p className="text-lg font-semibold text-gray-900">{user.name}</p>
+          <p className="text-lg font-semibold text-white">{user.name}</p>
           <p className="text-sm text-gray-500">{user.email}</p>
         </div>
       </div>
@@ -37,7 +37,7 @@ const Account = () => {
       {/* Form thông tin */}
       <div className="space-y-5 max-w-md">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Họ tên</label>
+          <label className="block text-sm font-medium text-white mb-1">Họ tên</label>
           <input
             name="name"
             value={user.name}
@@ -48,7 +48,7 @@ const Account = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <label className="block text-sm font-medium text-white mb-1">Email</label>
           <input
             name="email"
             value={user.email}
@@ -59,7 +59,7 @@ const Account = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
+          <label className="block text-sm font-medium text-white mb-1">Số điện thoại</label>
           <input
             name="phone"
             value={user.phone}
