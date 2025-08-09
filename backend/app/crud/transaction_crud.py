@@ -1,260 +1,378 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, desc, asc
-from models.transaction import Transaction
-from schemas.transaction_schema import TransactionCreate, TransactionUpdate, TransactionFilter
+from sqlalchemy import and_, or_, desc, asc, func
 from uuid import UUID
 from typing import List, Optional, Tuple
 from datetime import datetime, date
 import json
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-class TransactionCRUD:
-    def __init__(self, db: Session):
-        self.db = db
+from models.transaction import Transaction
+from models.category import Category,UserCategory
+from schemas.transaction_schema import (
+    TransactionCreate, 
+    TransactionUpdate,
+    TransactionResponse,
+    TransactionFilter,
+    TransactionListResponse)
+from  crud.category_crud import get_category_display_name
 
-    def get_by_id(self, transaction_id: UUID) -> Optional[Transaction]:
-        """Get transaction by ID"""
-        return self.db.query(Transaction).filter(
-            Transaction.TransactionID == transaction_id
-        ).first()
-
-    def get_by_user(
-        self, 
-        user_id: UUID, 
-        skip: int = 0, 
-        limit: int = 100,
-        order_by: str = "transaction_date",
-        order_dir: str = "desc"
-    ) -> List[Transaction]:
-        """Get transactions by user with pagination and sorting"""
-        query = self.db.query(Transaction).filter(Transaction.UserID == user_id)
-        
-        # Apply ordering
-        if order_dir.lower() == "desc":
-            if order_by == "amount":
-                query = query.order_by(desc(Transaction.Amount))
-            elif order_by == "created_at":
-                query = query.order_by(desc(Transaction.CreatedAt))
-            else:  # default to transaction_date
-                query = query.order_by(desc(Transaction.TransactionDate))
-        else:
-            if order_by == "amount":
-                query = query.order_by(asc(Transaction.Amount))
-            elif order_by == "created_at":
-                query = query.order_by(asc(Transaction.CreatedAt))
-            else:  # default to transaction_date
-                query = query.order_by(asc(Transaction.TransactionDate))
-        
-        return query.offset(skip).limit(limit).all()
-
-    def get_filtered(
-        self, 
-        user_id: UUID, 
-        filters: TransactionFilter,
-        skip: int = 0, 
-        limit: int = 100
-    ) -> Tuple[List[Transaction], int]:
-        """Get filtered transactions with count"""
-        query = self.db.query(Transaction).filter(Transaction.UserID == user_id)
-        
-        # Apply filters
-        if filters.category_id:
-            query = query.filter(Transaction.CategoryID == filters.category_id)
-        
-        if filters.transaction_type:
-            query = query.filter(Transaction.TransactionType == filters.transaction_type)
-        
-        if filters.start_date:
-            query = query.filter(Transaction.TransactionDate >= filters.start_date)
-        
-        if filters.end_date:
-            query = query.filter(Transaction.TransactionDate <= filters.end_date)
-        
-        if filters.min_amount:
-            query = query.filter(Transaction.Amount >= filters.min_amount)
-        
-        if filters.max_amount:
-            query = query.filter(Transaction.Amount <= filters.max_amount)
-        
-        if filters.payment_method:
-            query = query.filter(Transaction.PaymentMethod == filters.payment_method)
-        
-        if filters.is_recurring is not None:
-            query = query.filter(Transaction.IsRecurring == filters.is_recurring)
-        
-        if filters.tags:
-            # Search for any of the provided tags
-            tag_conditions = []
-            for tag in filters.tags:
-                tag_conditions.append(Transaction.Tags.like(f'%"{tag}"%'))
-            query = query.filter(or_(*tag_conditions))
-        
-        # Get total count before pagination
-        total = query.count()
-        
-        # Apply pagination and ordering
-        transactions = query.order_by(desc(Transaction.TransactionDate)).offset(skip).limit(limit).all()
-        
-        return transactions, total
-
-    def create(self, user_id: UUID, transaction_data: TransactionCreate) -> Transaction:
-        """Create new transaction"""
-        # Convert tags list to JSON string if provided
-        transaction_dict = transaction_data.dict()
-        if transaction_dict.get('tags'):
-            transaction_dict['tags'] = json.dumps(transaction_dict['tags'])
-        
-        # Map schema fields to model fields
-        db_transaction = Transaction(
-            UserID=user_id,
-            CategoryID=transaction_dict['category_id'],
-            TransactionType=transaction_dict['transaction_type'],
-            Amount=transaction_dict['amount'],
-            Description=transaction_dict.get('description'),
-            TransactionDate=transaction_dict['transaction_date'],
-            TransactionTime=transaction_dict.get('transaction_time'),
-            PaymentMethod=transaction_dict.get('payment_method'),
-            Location=transaction_dict.get('location'),
-            Tags=transaction_dict.get('tags'),
-            ReceiptURL=transaction_dict.get('receipt_url'),
-            Notes=transaction_dict.get('notes'),
-            IsRecurring=transaction_dict.get('is_recurring', False),
-            RecurringPattern=transaction_dict.get('recurring_pattern'),
-            CreatedBy=transaction_dict.get('created_by', 'manual')
+def get_user_category_id_by_display_name(
+    db: Session, 
+    user_id: UUID, 
+    display_name: str,
+    transaction_type: str):
+    """Get user category ID by display name and transaction type"""
+    result = (
+        db.query(UserCategory)
+        .join(Category, UserCategory.CategoryID == Category.CategoryID)
+        .filter(
+            UserCategory.UserID == user_id,
+            UserCategory.IsActive == True,
+            Category.CategoryType == transaction_type,
+            (
+                (UserCategory.CustomName == display_name) |
+                ((UserCategory.CustomName.is_(None)) & (Category.CategoryName == display_name))
+            )
         )
-        
-        self.db.add(db_transaction)
-        self.db.commit()
-        self.db.refresh(db_transaction)
-        return db_transaction
-
-    def update(self, transaction_id: UUID, user_id: UUID, updates: TransactionUpdate) -> Optional[Transaction]:
-        """Update transaction"""
-        db_transaction = self.db.query(Transaction).filter(
-            and_(
-                Transaction.TransactionID == transaction_id,
-                Transaction.UserID == user_id
-            )
-        ).first()
-        
-        if not db_transaction:
-            return None
-        
-        update_dict = updates.dict(exclude_unset=True)
-        
-        # Convert tags list to JSON string if provided
-        if 'tags' in update_dict and update_dict['tags']:
-            update_dict['tags'] = json.dumps(update_dict['tags'])
-        
-        # Map schema fields to model fields
-        field_mapping = {
-            'category_id': 'CategoryID',
-            'transaction_type': 'TransactionType',
-            'amount': 'Amount',
-            'description': 'Description',
-            'transaction_date': 'TransactionDate',
-            'transaction_time': 'TransactionTime',
-            'payment_method': 'PaymentMethod',
-            'location': 'Location',
-            'tags': 'Tags',
-            'receipt_url': 'ReceiptURL',
-            'notes': 'Notes',
-            'is_recurring': 'IsRecurring',
-            'recurring_pattern': 'RecurringPattern'
-        }
-        
-        for schema_field, model_field in field_mapping.items():
-            if schema_field in update_dict:
-                setattr(db_transaction, model_field, update_dict[schema_field])
-        
-        db_transaction.UpdatedAt = datetime.utcnow()
-        self.db.commit()
-        self.db.refresh(db_transaction)
-        return db_transaction
-
-    def delete(self, transaction_id: UUID, user_id: UUID) -> bool:
-        """Delete transaction"""
-        db_transaction = self.db.query(Transaction).filter(
-            and_(
-                Transaction.TransactionID == transaction_id,
-                Transaction.UserID == user_id
-            )
-        ).first()
-        
-        if not db_transaction:
-            return False
-        
-        self.db.delete(db_transaction)
-        self.db.commit()
-        return True
-
-    def get_summary(self, user_id: UUID, start_date: Optional[date] = None, end_date: Optional[date] = None) -> dict:
-        """Get transaction summary for user"""
-        query = self.db.query(Transaction).filter(Transaction.UserID == user_id)
-        
-        if start_date:
-            query = query.filter(Transaction.TransactionDate >= start_date)
-        if end_date:
-            query = query.filter(Transaction.TransactionDate <= end_date)
-        
-        transactions = query.all()
-        
-        total_income = sum(t.Amount for t in transactions if t.TransactionType == 'income')
-        total_expense = sum(t.Amount for t in transactions if t.TransactionType == 'expense')
-        
-        return {
-            'total_income': total_income,
-            'total_expense': total_expense,
-            'net_amount': total_income - total_expense,
-            'transaction_count': len(transactions)
-        }
-
-    def get_by_category(self, user_id: UUID, category_id: UUID, skip: int = 0, limit: int = 100) -> List[Transaction]:
-        """Get transactions by category"""
-        return (
-            self.db.query(Transaction)
-            .filter(
-                and_(
-                    Transaction.UserID == user_id,
-                    Transaction.CategoryID == category_id
-                )
-            )
-            .order_by(desc(Transaction.TransactionDate))
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
-
-    def get_recurring(self, user_id: UUID) -> List[Transaction]:
-        """Get recurring transactions"""
-        return (
-            self.db.query(Transaction)
-            .filter(
-                and_(
-                    Transaction.UserID == user_id,
-                    Transaction.IsRecurring == True
-                )
-            )
-            .order_by(desc(Transaction.TransactionDate))
-            .all()
-        )
-    
-    #Cập nhật save_chat_message (25/7/25 Sơn)
-    def save_chat_message(db: Session, user_id: str, session_id: str, question: str, answer: str, intent: str = None, entities: dict = None, confidence_score: float = None):
-    chat_message = ChatMessage(
-        session_id=session_id,
-        user_id=user_id,
-        message_type="user" if question else "bot",
-        content=question if question else answer,
-        intent=intent,
-        entities=entities,
-        confidence_score=confidence_score,
-        action_taken="recorded" if intent == "record_transaction" else None
+        .first()
     )
-    db.add(chat_message)
+    if not result:
+        print(f"Display name nhận được: '{display_name}'")
+        print(f"Transaction type nhận được: '{transaction_type}'")
+        category = (
+            db.query(Category)
+            .filter(
+                Category.IsActive == True,
+                Category.CategoryType == transaction_type,
+                Category.CategoryName == display_name
+            )
+            .first()
+        )
+        print("Category tìm thấy:", category)
+        if category:
+            # Tạo user category mới cho user
+            new_user_cat = UserCategory(
+                UserID=user_id,
+                CategoryID=category.CategoryID,
+                CustomName=None,
+                IsActive=True
+            )
+            db.add(new_user_cat)
+            db.commit()
+            db.refresh(new_user_cat)
+            return new_user_cat.UserCategoryID
+        return None
+    return result.UserCategoryID
+
+def create_transaction(
+    db: Session, 
+    user_id: UUID, 
+    transaction_data: TransactionCreate
+) -> TransactionResponse:
+    """Create a new transaction"""
+    user_category_id = get_user_category_id_by_display_name(
+        db= db, 
+        user_id=user_id,
+        display_name=transaction_data.category_display_name,
+        transaction_type=transaction_data.transaction_type
+    )
+    if not user_category_id:
+        raise HTTPException(
+            status_code=404,
+            detail="Không tìm thấy danh mục phù hợp"
+        )
+    db_transaction = Transaction(
+        UserID=user_id,
+        UserCategoryID=user_category_id,
+        TransactionType=transaction_data.transaction_type,
+        Amount=transaction_data.amount,
+        Description=transaction_data.description,
+        TransactionDate=transaction_data.transaction_date,
+        TransactionTime=transaction_data.transaction_time or datetime.now().time(),
+        PaymentMethod=transaction_data.payment_method,
+        Location=transaction_data.location,
+        Notes=transaction_data.notes,
+        CreatedBy= transaction_data.created_by
+    )
+    db.add(db_transaction)
     db.commit()
-    # Cập nhật MessageCount trong ChatSession
-    session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
-    if session:
-        session.message_count += 1
-        db.commit()
-    return chat_message
+    db.refresh(db_transaction)
+
+    # Lấy tên hiển thị của danh mục
+    category_display_name = get_category_display_name(db, user_category_id)
+    
+    # Chuyển đổi transaction object thành dict và thêm category_display_name
+    transaction_dict = {
+        'TransactionID': db_transaction.TransactionID,
+        'UserID': db_transaction.UserID,
+        'UserCategoryID': db_transaction.UserCategoryID,
+        'transaction_type': db_transaction.TransactionType,
+        'amount': db_transaction.Amount,
+        'description': db_transaction.Description,
+        'transaction_date': db_transaction.TransactionDate,
+        'transaction_time': db_transaction.TransactionTime,
+        'payment_method': db_transaction.PaymentMethod,
+        'location': db_transaction.Location,
+        'notes': db_transaction.Notes,
+        'created_by': db_transaction.CreatedBy,
+        'category_display_name': category_display_name,
+        'CreatedAt': db_transaction.CreatedAt,
+        'UpdatedAt': db_transaction.UpdatedAt
+    }
+    
+    return TransactionResponse(**transaction_dict)
+
+def get_transaction_by_id(
+    db: Session, 
+    user_id: UUID, 
+    transaction_id: UUID
+) -> TransactionResponse:
+    """Get a transaction by ID"""
+    transaction = (
+        db.query(Transaction)
+        .filter(
+            Transaction.UserID == user_id,
+            Transaction.TransactionID == transaction_id,
+        )
+        .first()
+    )
+    if not transaction:
+        raise HTTPException(
+            status_code=404,
+            detail="Không tìm thấy giao dịch"
+        )
+    # Lấy tên hiển thị của danh mục
+    category_display_name = get_category_display_name(db, transaction.UserCategoryID)
+    
+    # Chuyển đổi transaction object thành dict và thêm category_display_name
+    transaction_dict = {
+        'TransactionID': transaction.TransactionID,
+        'UserID': transaction.UserID,
+        'UserCategoryID': transaction.UserCategoryID,
+        'transaction_type': transaction.TransactionType,
+        'amount': transaction.Amount,
+        'description': transaction.Description,
+        'transaction_date': transaction.TransactionDate,
+        'transaction_time': transaction.TransactionTime,
+        'payment_method': transaction.PaymentMethod,
+        'location': transaction.Location,
+        'notes': transaction.Notes,
+        'created_by': transaction.CreatedBy,
+        'category_display_name': category_display_name,
+        'CreatedAt': transaction.CreatedAt,
+        'UpdatedAt': transaction.UpdatedAt
+    }
+    
+    return TransactionResponse(**transaction_dict)
+
+def get_transactions(
+    db: Session, 
+    user_id: UUID, 
+    filters: TransactionFilter
+) -> TransactionListResponse:
+    """Get transactions with optional filters"""
+    # Build base query
+    query = (
+        db.query(Transaction, UserCategory, Category)
+        .join(UserCategory, Transaction.UserCategoryID == UserCategory.UserCategoryID)
+        .join(Category, UserCategory.CategoryID == Category.CategoryID)
+        .filter(Transaction.UserID == user_id)
+    )
+    # Apply filters
+    if filters.transaction_type:
+        query = query.filter(Transaction.TransactionType == filters.transaction_type)
+    
+    if filters.category_display_name:
+        query = query.filter(
+            or_(
+                UserCategory.CustomName == filters.category_display_name,
+                and_(
+                    UserCategory.CustomName.is_(None),
+                    Category.CategoryName == filters.category_display_name
+                )
+            )
+        )
+    if filters.payment_method:
+        query = query.filter(Transaction.PaymentMethod.ilike(f"%{filters.payment_method}%"))
+    
+    if filters.location:
+        query = query.filter(Transaction.Location.ilike(f"%{filters.location}%"))
+    
+    if filters.date_from:
+        query = query.filter(Transaction.TransactionDate >= filters.date_from)
+    if filters.date_to:
+        query = query.filter(Transaction.TransactionDate <= filters.date_to)
+    
+    if filters.amount_min:
+        query = query.filter(Transaction.Amount >= filters.amount_min)
+    if filters.amount_max:
+        query = query.filter(Transaction.Amount <= filters.amount_max)
+    
+    if filters.search:
+        search_term = f"%{filters.search}%"
+        query = query.filter(
+            or_(
+                Transaction.Description.ilike(search_term),
+                Transaction.Notes.ilike(search_term)
+            )
+        )
+    if filters.created_by:
+        query = query.filter(Transaction.CreatedBy == filters.created_by)
+
+    # Đếm tổng số lượng giao dịch
+    total_count = query.count()
+
+    total_query = query.with_entities(
+        func.sum(func.case((Transaction.TransactionType == 'income', Transaction.Amount), else_=0)).label('total_income'),    
+        func.sum(func.case((Transaction.TransactionType == 'expense', Transaction.Amount), else_=0)).label('total_expense')
+    ).first()
+
+    total_income = total_query.total_income if total_query.total_income else 0
+    total_expense = total_query.total_expense if total_query.total_expense else 0
+    net_amount = total_income - total_expense
+
+    # Apply sorting
+    sort_field = getattr(Transaction, filters.order_by, Transaction.TransactionDate)
+    if filters.sort_order == 'desc':
+        query = query.order_by(desc(sort_field))
+    else:
+        query = query.order_by(asc(sort_field))
+
+    # Apply pagination
+    query = query.offset(filters.skip).limit(filters.limit)
+
+    # Execute query and get results
+    results = query.all()
+
+    transactions = []
+    for transaction, user_category, category in results:
+        category_display_name = user_category.CustomName if user_category.CustomName else category.CategoryName
+        
+        # Chuyển đổi transaction object thành dict và thêm category_display_name
+        transaction_dict = {
+            'TransactionID': transaction.TransactionID,
+            'UserID': transaction.UserID,
+            'UserCategoryID': transaction.UserCategoryID,
+            'transaction_type': transaction.TransactionType,
+            'amount': transaction.Amount,
+            'description': transaction.Description,
+            'transaction_date': transaction.TransactionDate,
+            'transaction_time': transaction.TransactionTime,
+            'payment_method': transaction.PaymentMethod,
+            'location': transaction.Location,
+            'notes': transaction.Notes,
+            'created_by': transaction.CreatedBy,
+            'category_display_name': category_display_name,
+            'CreatedAt': transaction.CreatedAt,
+            'UpdatedAt': transaction.UpdatedAt
+        }
+        
+        transactions.append(TransactionResponse(**transaction_dict))
+
+    return TransactionListResponse(
+        transaction=transactions,  
+        total_count=total_count,
+        total_income=total_income,
+        total_expense=total_expense,
+        net_amount=net_amount
+    )
+
+def update_transaction(
+    db: Session, 
+    user_id: UUID, 
+    transaction_id: UUID, 
+    transaction_data: TransactionUpdate
+) -> TransactionResponse:
+    """Update an existing transaction"""
+    transaction = (
+        db.query(Transaction)
+        .filter(
+            Transaction.UserID == user_id,
+            Transaction.TransactionID == transaction_id,
+        )
+        .first()
+    )
+    if not transaction:
+        raise HTTPException(
+            status_code=404,
+            detail="Không tìm thấy giao dịch"
+        )
+
+    # Cập nhật danh mục nếu cần
+    if transaction_data.category_display_name:
+        user_category_id = get_user_category_id_by_display_name(
+            db=db, 
+            user_id=user_id,
+            display_name=transaction_data.category_display_name,
+            transaction_type=transaction.TransactionType
+        )
+        if not user_category_id:
+            raise HTTPException(
+                status_code=404,
+                detail="Không tìm thấy danh mục phù hợp"
+            )
+        transaction.UserCategoryID = user_category_id
+
+    # Cập nhật các trường giao dịch (trừ category_display_name)
+    update_data = transaction_data.model_dump(exclude_unset=True, exclude={'category_display_name'})
+    for key, value in update_data.items():
+        if key == 'transaction_type':
+            setattr(transaction, 'TransactionType', value)
+        elif key == 'payment_method':
+            setattr(transaction, 'PaymentMethod', value)
+        elif key == 'transaction_date':
+            setattr(transaction, 'TransactionDate', value)
+        elif key == 'transaction_time':
+            setattr(transaction, 'TransactionTime', value)
+        elif key == 'created_by':
+            setattr(transaction, 'CreatedBy', value)
+        else:
+            # Capitalize first letter for other fields
+            field_name = key.capitalize()
+            setattr(transaction, field_name, value)
+
+    db.commit()
+    db.refresh(transaction)
+
+    # Lấy tên hiển thị của danh mục
+    category_display_name = get_category_display_name(db, transaction.UserCategoryID)
+    
+    # Chuyển đổi transaction object thành dict và thêm category_display_name
+    transaction_dict = {
+        'TransactionID': transaction.TransactionID,
+        'UserID': transaction.UserID,
+        'UserCategoryID': transaction.UserCategoryID,
+        'transaction_type': transaction.TransactionType,
+        'amount': transaction.Amount,
+        'description': transaction.Description,
+        'transaction_date': transaction.TransactionDate,
+        'transaction_time': transaction.TransactionTime,
+        'payment_method': transaction.PaymentMethod,
+        'location': transaction.Location,
+        'notes': transaction.Notes,
+        'created_by': transaction.CreatedBy,
+        'category_display_name': category_display_name,
+        'CreatedAt': transaction.CreatedAt,
+        'UpdatedAt': transaction.UpdatedAt
+    }
+    
+    return TransactionResponse(**transaction_dict)
+
+def delete_transaction(db: Session, transaction_id: UUID, user_id: UUID) -> bool:
+    """Delete a transaction"""
+    transaction = (
+        db.query(Transaction)
+        .filter(
+            Transaction.TransactionID == transaction_id,
+            Transaction.UserID == user_id
+        )
+        .first()
+    )
+    
+    if not transaction:
+        return False
+    
+    db.delete(transaction)
+    db.commit()
+    return True
+

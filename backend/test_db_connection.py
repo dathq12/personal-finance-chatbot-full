@@ -3,11 +3,11 @@ import urllib
 
 params = urllib.parse.quote_plus(
     "DRIVER={ODBC Driver 17 for SQL Server};"
-    "SERVER=DESKTOP-SO4EPRT;"
+    "SERVER=DESKTOP-2SS6FHK\\SQLEXPRESS;"
     "DATABASE=FinanceChatbotDB;"
-    "UID=dathq12;"
-    "PWD=dathq12;"
+    "Trusted_Connection=yes;"
 )
+
 
 db_url = f"mssql+pyodbc:///?odbc_connect={params}"
 engine = create_engine(db_url)

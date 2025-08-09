@@ -7,7 +7,7 @@ from uuid import UUID
 from app.database import get_db
 from schemas.category_schema import (
     CategoryCreate, CategoryUpdate, CategoryResponse, CategoryListResponse,
-    UserCategoryCreate, UserCategoryUpdate, UserCategoryResponse, UserCategoryListResponse,
+    UserCategoryCreate, UserCategoryResponse, UserCategoryListResponse,
     CategoryWithChildren
 )
 from crud import category_crud
@@ -214,6 +214,6 @@ async def get_user_category_by_user_and_category(
         raise HTTPException(status_code=404, detail="User category not found")
     return user_category
 
-@router.put("/user-categories/{user_category_id}", response_model=UserCategoryResponse)
-async def update_user_category(
-    user_category_i
+# @router.put("/user-categories/{user_category_id}", response_model=UserCategoryResponse)
+# async def update_user_category(
+#     user_category_i

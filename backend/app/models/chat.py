@@ -1,14 +1,14 @@
 # income.py
-from sqlalchemy import Column, String, Date, Time, Boolean, ForeignKey, Numeric, DateTime,Integer
+from sqlalchemy import Column, String, Boolean, ForeignKey, DateTime, Integer
 from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER
 from database import Base
-from datetime import datetime
+from datetime import datetime, timezone
 class ChatSession(Base):
     __tablename__ = "ChatSessions"
     SessionID = Column(UNIQUEIDENTIFIER, primary_key=True)
     UserID = Column(UNIQUEIDENTIFIER, ForeignKey("Users.UserID"))
     SessionName = Column(String(255))
-    StartedAt = Column(DateTime, default=datetime.utcnow)
+    StartedAt = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     EndedAt = Column(DateTime)
     IsActive = Column(Boolean, default=True)
     MessageCount = Column(Integer, default=0)

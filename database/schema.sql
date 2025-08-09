@@ -1,8 +1,8 @@
 -- DATABASE SCHEMA: HỆ THỐNG QUẢN LÝ TÀI CHÍNH CÁ NHÂN - SQL SERVER
 -- ===================================================================
 
--- CREATE DATABASE PersonalFinanceApp;
--- USE PersonalFinanceApp;
+-- CREATE DATABASE FinanceChatbotDB;
+-- USE FinanceChatbotDB;
 
 -- 1. BẢNG QUẢN LÝ NGƯỜI DÙNG
 -- ===================================================================
@@ -13,11 +13,8 @@ CREATE TABLE Users (
     PasswordHash NVARCHAR(255) NOT NULL,
     FullName NVARCHAR(255) NOT NULL,
     Phone NVARCHAR(20),
-    AvatarURL NVARCHAR(500),
-    TimeZone NVARCHAR(50) DEFAULT 'SE Asia Standard Time',
     Currency NCHAR(3) DEFAULT 'VND',
     IsActive BIT DEFAULT 1,
-    EmailVerified BIT DEFAULT 0,
     CreatedAt DATETIME2 DEFAULT GETDATE(),
     UpdatedAt DATETIME2 DEFAULT GETDATE(),
     LastLogin DATETIME2
@@ -27,7 +24,7 @@ CREATE TABLE UserSessions (
     SessionID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     UserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID) ON DELETE CASCADE,
     RefreshToken NVARCHAR(500) NOT NULL,
-    DeviceInfo NVARCHAR(MAX),
+    DeviceInfo NVARCHAR(255),
     IPAddress NVARCHAR(45),
     ExpiresAt DATETIME2 NOT NULL,
     CreatedAt DATETIME2 DEFAULT GETDATE()
@@ -53,7 +50,7 @@ CREATE TABLE Categories (
 CREATE TABLE UserCategories (
     UserCategoryID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     UserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID) ON DELETE CASCADE,
-    CategoryID UNIQUEIDENTIFIER NOT NULL REFERENCES Categories(CategoryID),
+    CategoryID UNIQUEIDENTIFIER NULL REFERENCES Categories(CategoryID),
     CustomName NVARCHAR(100),
     IsActive BIT DEFAULT 1,
     CreatedAt DATETIME2 DEFAULT GETDATE(),
@@ -66,7 +63,7 @@ CREATE TABLE UserCategories (
 CREATE TABLE Transactions (
     TransactionID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     UserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID) ON DELETE CASCADE,
-    CategoryID UNIQUEIDENTIFIER NOT NULL REFERENCES Categories(CategoryID),
+    UserCategoryID UNIQUEIDENTIFIER NOT NULL REFERENCES UserCategories(UserCategoryID),
     TransactionType NVARCHAR(20) NOT NULL CHECK (TransactionType IN ('income', 'expense')),
     Amount DECIMAL(15,2) NOT NULL CHECK (Amount > 0),
     Description NVARCHAR(500),
@@ -74,14 +71,10 @@ CREATE TABLE Transactions (
     TransactionTime TIME DEFAULT CONVERT(TIME, GETDATE()),
     PaymentMethod NVARCHAR(50),
     Location NVARCHAR(255),
-    Tags NVARCHAR(MAX),
-    ReceiptURL NVARCHAR(500),
-    Notes NVARCHAR(MAX),
-    IsRecurring BIT DEFAULT 0,
-    RecurringPattern NVARCHAR(MAX),
+    Notes NVARCHAR(500),
     CreatedAt DATETIME2 DEFAULT GETDATE(),
     UpdatedAt DATETIME2 DEFAULT GETDATE(),
-    CreatedBy NVARCHAR(20) DEFAULT 'manual' CHECK (CreatedBy IN ('manual', 'chatbot', 'import', 'recurring'))
+    CreatedBy NVARCHAR(20) DEFAULT 'manual' CHECK (CreatedBy IN ('manual', 'chatbot'))
 );
 
 -- 4. NGÂN SÁCH
@@ -90,29 +83,59 @@ CREATE TABLE Transactions (
 CREATE TABLE Budgets (
     BudgetID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     UserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID) ON DELETE CASCADE,
-    CategoryID UNIQUEIDENTIFIER REFERENCES Categories(CategoryID),
+    
     BudgetName NVARCHAR(255) NOT NULL,
     BudgetType NVARCHAR(20) NOT NULL CHECK (BudgetType IN ('monthly', 'weekly', 'yearly')),
     Amount DECIMAL(15,2) NOT NULL CHECK (Amount > 0),
+    
     PeriodStart DATE NOT NULL,
     PeriodEnd DATE NOT NULL,
+    
+    AutoAdjust BIT DEFAULT 0,            -- Tự động điều chỉnh các danh mục con khi thay đổi tổng ngân sách
+    IncludeIncome BIT DEFAULT 0,         -- Bao gồm cả thu nhập (1) hay chỉ chi tiêu (0)
+
     AlertThreshold DECIMAL(5,2) DEFAULT 80.00 CHECK (AlertThreshold BETWEEN 0 AND 100),
     IsActive BIT DEFAULT 1,
+
     CreatedAt DATETIME2 DEFAULT GETDATE(),
     UpdatedAt DATETIME2 DEFAULT GETDATE()
 );
 
+
 CREATE TABLE BudgetAlerts (
-    AlertID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    BudgetID UNIQUEIDENTIFIER NOT NULL REFERENCES Budgets(BudgetID) ON DELETE CASCADE,
-    UserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID) ON DELETE CASCADE,
-    AlertType NVARCHAR(20) NOT NULL CHECK (AlertType IN ('warning', 'exceeded', 'near_limit')),
-    CurrentAmount DECIMAL(15,2) NOT NULL,
-    BudgetAmount DECIMAL(15,2) NOT NULL,
-    PercentageUsed DECIMAL(5,2) NOT NULL,
-    Message NVARCHAR(MAX),
-    IsRead BIT DEFAULT 0,
-    CreatedAt DATETIME2 DEFAULT GETDATE()
+    AlertID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),           -- Khóa chính
+    BudgetID UNIQUEIDENTIFIER NOT NULL REFERENCES Budgets(BudgetID) , -- Liên kết tới ngân sách
+    UserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID) ,       -- Người dùng liên quan
+
+    AlertType NVARCHAR(20) NOT NULL 
+        CHECK (AlertType IN ('warning', 'exceeded', 'near_limit')), -- Loại cảnh báo:
+        -- 'warning'     → Cảnh báo sớm (ví dụ: vượt 70%)
+        -- 'near_limit' → Gần vượt mức (ví dụ: 90%)
+        -- 'exceeded'   → Đã vượt quá ngân sách
+
+    CurrentAmount DECIMAL(15,2) NOT NULL,   -- Số tiền đã chi tiêu
+    BudgetAmount DECIMAL(15,2) NOT NULL,    -- Ngân sách đã đặt
+    PercentageUsed DECIMAL(5,2) NOT NULL,   -- % đã sử dụng = Current / Budget * 100
+
+    Message NVARCHAR(MAX),                  -- Nội dung thông báo chi tiết (tùy chỉnh)
+    IsRead BIT DEFAULT 0,                   -- Đánh dấu đã đọc thông báo hay chưa
+
+    CreatedAt DATETIME2 DEFAULT GETDATE()   -- Thời gian tạo cảnh báo
+);
+
+
+CREATE TABLE BudgetCategories (
+    BudgetCategoryID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    BudgetID UNIQUEIDENTIFIER NOT NULL REFERENCES Budgets(BudgetID) ,
+    UserCategoryID UNIQUEIDENTIFIER NOT NULL REFERENCES UserCategories(UserCategoryID),
+
+    AllocatedAmount DECIMAL(15,2) NOT NULL CHECK (AllocatedAmount >= 0),
+    SpentAmount DECIMAL(15,2) DEFAULT 0 CHECK (SpentAmount >= 0), -- Tổng chi tiêu thực tế (tính toán hoặc lưu để tối ưu)
+
+    CreatedAt DATETIME2 DEFAULT GETDATE(),
+    UpdatedAt DATETIME2 DEFAULT GETDATE(),
+
+    UNIQUE (BudgetID, UserCategoryID)
 );
 
 -- 5. CHATBOT
@@ -131,7 +154,7 @@ CREATE TABLE ChatSessions (
 CREATE TABLE ChatMessages (
     MessageID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     SessionID UNIQUEIDENTIFIER NOT NULL REFERENCES ChatSessions(SessionID) ON DELETE CASCADE,
-    UserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID) ON DELETE CASCADE,
+    UserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID),
     MessageType NVARCHAR(20) NOT NULL CHECK (MessageType IN ('user', 'bot', 'system')),
     Content NVARCHAR(MAX) NOT NULL,
     Intent NVARCHAR(50),
@@ -147,12 +170,33 @@ CREATE TABLE ChatMessages (
 CREATE TABLE SavedReports (
     ReportID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     UserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID) ON DELETE CASCADE,
-    ReportName NVARCHAR(255) NOT NULL,
-    ReportType NVARCHAR(50) NOT NULL,
-    ReportConfig NVARCHAR(MAX),
-    LastGenerated DATETIME2,
-    CreatedAt DATETIME2 DEFAULT GETDATE()
+    -- Tên tùy chỉnh người dùng đặt
+    ReportName NVARCHAR(100) NOT NULL,
+    -- Loại nội dung: report, chart, budget_template, export_template,...
+    TemplateType NVARCHAR(30) NOT NULL CHECK (TemplateType IN (
+        'report', 'chart', 'budget_template', 'export_template', 'custom'
+    )),
+    -- Kiểu báo cáo cụ thể: income_expense, category_analysis, ...
+    ReportType NVARCHAR(50) NOT NULL CHECK (ReportType IN (
+        'income_expense', 'budget_tracking', 'category_analysis',
+        'monthly_summary', 'custom'
+    )),
+    -- JSON config: chứa bộ lọc, khoảng ngày, danh mục, ngân sách, biểu đồ...
+    ReportConfig NVARCHAR(MAX) NOT NULL,
+    Description NVARCHAR(300),
+    -- Có lên lịch tự động không
+    IsScheduled BIT DEFAULT 0,
+    -- Tần suất (nếu có): daily, weekly, monthly
+    ScheduleFrequency NVARCHAR(15) CHECK (
+        ScheduleFrequency IN ('daily', 'weekly', 'monthly') OR ScheduleFrequency IS NULL
+    ),
+    -- Lần chạy gần nhất (nếu có)
+    LastGenerated DATETIME,
+    -- Thời gian tạo và cập nhật
+    CreatedAt DATETIME2 DEFAULT GETDATE(),
+    UpdatedAt DATETIME2 DEFAULT GETDATE()
 );
+
 
 -- 7. AUDIT LOGS
 -- ===================================================================
@@ -291,42 +335,6 @@ BEGIN
     GROUP BY b.BudgetID, b.BudgetName, b.Amount, b.AlertThreshold;
 END;
 
--- DỮ LIỆU MẪU
--- ===================================================================
-
-INSERT INTO Categories (CategoryName, CategoryType, Icon, Color, IsDefault, SortOrder) VALUES 
-('Thu nhập', 'income', 'money-bill-wave', '#22c55e', 1, 1),
-('Chi tiêu thiết yếu', 'expense', 'home', '#ef4444', 1, 2),
-('Chi tiêu giải trí', 'expense', 'gamepad', '#f59e0b', 1, 3),
-('Đầu tư & Tiết kiệm', 'expense', 'chart-line', '#3b82f6', 1, 4);
-
-DECLARE @IncomeID UNIQUEIDENTIFIER = (SELECT CategoryID FROM Categories WHERE CategoryName = 'Thu nhập');
-DECLARE @EssentialID UNIQUEIDENTIFIER = (SELECT CategoryID FROM Categories WHERE CategoryName = 'Chi tiêu thiết yếu');
-DECLARE @EntertainmentID UNIQUEIDENTIFIER = (SELECT CategoryID FROM Categories WHERE CategoryName = 'Chi tiêu giải trí');
-DECLARE @InvestmentID UNIQUEIDENTIFIER = (SELECT CategoryID FROM Categories WHERE CategoryName = 'Đầu tư & Tiết kiệm');
-
-INSERT INTO Categories (CategoryName, CategoryType, ParentCategoryID, Icon, IsDefault, SortOrder) VALUES 
-('Lương', 'income', @IncomeID, 'wallet', 1, 1),
-('Thưởng', 'income', @IncomeID, 'gift', 1, 2),
-('Freelance', 'income', @IncomeID, 'laptop', 1, 3),
-('Lợi nhuận đầu tư', 'income', @IncomeID, 'trending-up', 1, 4),
-
-('Ăn uống', 'expense', @EssentialID, 'utensils', 1, 1),
-('Tiền nhà', 'expense', @EssentialID, 'home', 1, 2),
-('Giao thông', 'expense', @EssentialID, 'car', 1, 3),
-('Y tế', 'expense', @EssentialID, 'stethoscope', 1, 4),
-('Học phí', 'expense', @EssentialID, 'graduation-cap', 1, 5),
-
-('Cafe & Trà sữa', 'expense', @EntertainmentID, 'coffee', 1, 1),
-('Phim ảnh', 'expense', @EntertainmentID, 'film', 1, 2),
-('Mua sắm', 'expense', @EntertainmentID, 'shopping-bag', 1, 3),
-('Du lịch', 'expense', @EntertainmentID, 'plane', 1, 4),
-('Game & Ứng dụng', 'expense', @EntertainmentID, 'gamepad', 1, 5),
-
-('Tiết kiệm', 'expense', @InvestmentID, 'piggy-bank', 1, 1),
-('Chứng khoán', 'expense', @InvestmentID, 'chart-line', 1, 2),
-('Bất động sản', 'expense', @InvestmentID, 'building', 1, 3),
-('Bảo hiểm', 'expense', @InvestmentID, 'shield', 1, 4);
 
 -- Thêm bảng ChatbotTrainingData (25/7/25 Sơn)
 -- ===================================================================

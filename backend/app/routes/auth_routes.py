@@ -1,10 +1,10 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from app.schemas.auth import UserRegister, UserLogin, ForgotPassword, ResetPassword
+from app.schemas.auth import UserRegister, UserLogin, ForgotPassword, ResetPassword, Token
 from app.models import user_model
 from app.utils.security import hash_password, verify_password, create_reset_token, verify_reset_token
 from app.database import get_db
-
+from app.auth.jwt_handler import create_access_token
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/register")
@@ -14,6 +14,7 @@ def register(user: UserRegister, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email đã tồn tại")
 
     new_user = user_model.User(
+        FullName=user.full_name,
         email=user.email,
         password_hash=hash_password(user.password)
     )
@@ -26,7 +27,8 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     found = db.query(user_model.User).filter_by(email=user.email).first()
     if not found or not verify_password(user.password, found.password_hash):
         raise HTTPException(status_code=401, detail="Email hoặc mật khẩu không đúng")
-    return {"message": "Đăng nhập thành công"}
+    access_token = create_access_token({"sub": found.email})
+    return Token(access_token=access_token, token_type="bearer")
 
 @router.post("/forgot-password")
 def forgot_password(payload: ForgotPassword, db: Session = Depends(get_db)):
