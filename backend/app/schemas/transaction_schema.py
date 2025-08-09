@@ -2,7 +2,7 @@
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from uuid import UUID
 from datetime import date, time, datetime
-from typing import Optional, List
+from typing import Optional, List, Union
 from decimal import Decimal
 import json
 
@@ -59,6 +59,7 @@ class TransactionUpdate(BaseModel):
             raise ValueError('Amount must be positive')
         return v
 
+    
 class TransactionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -88,24 +89,44 @@ class TransactionListResponse(BaseModel):
     net_amount: Decimal = Field(..., description="Net amount (income - expense)")
 
 class TransactionFilter(BaseModel):
-    transaction_type: Optional[str] = None
-    category_display_name: Optional[str] = None
-    payment_method: Optional[str] = None
-    location: Optional[str] = None
-    date_from: Optional[date] = None
-    date_to: Optional[date] = None
-    amount_min: Optional[Decimal] = None
-    amount_max: Optional[Decimal] = None
-    search: Optional[str] = None # Search in description, notes, etc.
-    created_by: Optional[str] = None #'manual'or 'imported'
+    transaction_type: Optional[str] = Field(
+        None, description="Filter by transaction type: 'income' or 'expense'"
+    )
+    category_display_name: Optional[str] = Field(
+        None, description="Filter by category display name"
+    )
+    payment_method: Optional[str] = Field(
+        None, description="Filter by payment method"
+    )
+    location: Optional[str] = Field(
+        None, description="Filter by location"
+    )
+    date_from: Optional[Union[str, date]] = Field(
+        None, description="Filter by start date (YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY)"
+    )
+    date_to: Optional[Union[str, date]] = Field(
+        None, description="Filter by end date (YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY)"
+    )
+    amount_min: Optional[Decimal] = Field(
+        None, description="Minimum transaction amount"
+    )
+    amount_max: Optional[Decimal] = Field(
+        None, description="Maximum transaction amount"
+    )
+    search: Optional[str] = Field(
+        None, description="Search text in transaction details"
+    )
+    created_by: Optional[str] = Field(
+        None, description="Transaction source: 'manual' or 'imported'"
+    )
 
-    #Pagination
+    # Pagination
     skip: int = Field(0, ge=0, description="Number of records to skip")
     limit: int = Field(100, ge=1, le=500, description="Maximum number of records to return")
 
     # Sorting
-    order_by: Optional[str] = Field("transaction_date", description="Field to order by")
-    sort_order: Optional[str] = Field("desc", description="Order direction")
+    sort_by: Optional[str] = Field("transaction_date", description="Field to sort by")
+    sort_order: Optional[str] = Field("desc", description="Sort direction: 'asc' or 'desc'")
 
     @field_validator('transaction_type')
     @classmethod
@@ -123,7 +144,24 @@ class TransactionFilter(BaseModel):
     
     @field_validator('sort_order')
     @classmethod
-    def validate_sort_order(cls,v: Optional[str]) -> Optional[str]:
+    def validate_sort_order(cls, v: Optional[str]) -> Optional[str]:
         if v is not None and v not in ['asc', 'desc']:
             raise ValueError('Sort order must be either "asc" or "desc"')
+        return v
+    
+    @field_validator('date_from', 'date_to', mode='before')
+    @classmethod
+    def parse_custom_date(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, date):
+            return v
+        if isinstance(v, str):
+            # Try different date formats
+            for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"):
+                try:
+                    return datetime.strptime(v, fmt).date()
+                except ValueError:
+                    continue
+            raise ValueError("Invalid date format. Supported formats: YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY")
         return v

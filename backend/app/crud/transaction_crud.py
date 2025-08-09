@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, desc, asc, func
+from sqlalchemy import and_, or_, desc, asc, func, case
 from uuid import UUID
 from typing import List, Optional, Tuple
 from datetime import datetime, date
@@ -165,6 +165,43 @@ def get_transaction_by_id(
     
     return TransactionResponse(**transaction_dict)
 
+def get_transaction_by_id(
+    db: Session,
+    transaction_id: UUID,
+    user_id: UUID) ->Optional[TransactionResponse]:
+    """Get a transaction by ID"""
+    transaction = (
+        db.query(Transaction)
+        .filter(
+            Transaction.TransactionID == transaction_id,
+            Transaction.UserID == user_id
+        )
+        .first()
+    )
+    if not transaction:
+        return None
+    # Lấy tên hiển thị của danh mục
+    category_display_name = get_category_display_name(db, transaction.UserCategoryID)
+    # Chuyển đổi transaction object thành dict và thêm category_display_name
+    transaction_dict = {
+        'TransactionID': transaction.TransactionID,
+        'UserID': transaction.UserID,
+        'UserCategoryID': transaction.UserCategoryID,
+        'transaction_type': transaction.TransactionType,
+        'amount': transaction.Amount,
+        'description': transaction.Description,
+        'transaction_date': transaction.TransactionDate,
+        'transaction_time': transaction.TransactionTime,
+        'payment_method': transaction.PaymentMethod,
+        'location': transaction.Location,
+        'notes': transaction.Notes,
+        'created_by': transaction.CreatedBy,
+        'category_display_name': category_display_name,
+        'CreatedAt': transaction.CreatedAt,
+        'UpdatedAt': transaction.UpdatedAt
+    }
+    return TransactionResponse(**transaction_dict)
+
 def get_transactions(
     db: Session, 
     user_id: UUID, 
@@ -223,16 +260,16 @@ def get_transactions(
     total_count = query.count()
 
     total_query = query.with_entities(
-        func.sum(func.case((Transaction.TransactionType == 'income', Transaction.Amount), else_=0)).label('total_income'),    
-        func.sum(func.case((Transaction.TransactionType == 'expense', Transaction.Amount), else_=0)).label('total_expense')
+        func.sum(case((Transaction.TransactionType == 'income', Transaction.Amount), else_=0)).label('total_income'),
+        func.sum(case((Transaction.TransactionType == 'expense', Transaction.Amount), else_=0)).label('total_expense')
     ).first()
 
     total_income = total_query.total_income if total_query.total_income else 0
     total_expense = total_query.total_expense if total_query.total_expense else 0
     net_amount = total_income - total_expense
 
-    # Apply sorting
-    sort_field = getattr(Transaction, filters.order_by, Transaction.TransactionDate)
+    # Apply sorting - Updated to use sort_by instead of order_by
+    sort_field = getattr(Transaction, filters.sort_by, Transaction.TransactionDate)
     if filters.sort_order == 'desc':
         query = query.order_by(desc(sort_field))
     else:
@@ -376,3 +413,27 @@ def delete_transaction(db: Session, transaction_id: UUID, user_id: UUID) -> bool
     db.commit()
     return True
 
+def get_transaction_summary(
+    db: Session, 
+    user_id: UUID, 
+    date_from: Optional[date] = None, 
+    date_to: Optional[date] = None
+) -> dict:
+    """Get transaction summary for a user"""
+    query = db.query(
+        func.sum(case((Transaction.TransactionType == 'income', Transaction.Amount), else_=0)).label('total_income'),
+        func.sum(case((Transaction.TransactionType == 'expense', Transaction.Amount), else_=0)).label('total_expense')
+    ).filter(Transaction.UserID == user_id)
+
+    if date_from:
+        query = query.filter(Transaction.TransactionDate >= date_from)
+    if date_to:
+        query = query.filter(Transaction.TransactionDate <= date_to)
+
+    result = query.first()
+    
+    return {
+        'total_income': result.total_income if result.total_income else 0,
+        'total_expense': result.total_expense if result.total_expense else 0,
+        'net_amount': (result.total_income - result.total_expense) if result else 0
+    }
