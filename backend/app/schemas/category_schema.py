@@ -1,13 +1,13 @@
 # schemas/category_schema.py
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from uuid import UUID
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Literal
 
 # Category Schemas
 class CategoryBase(BaseModel):
     category_name: str = Field(..., min_length=1, max_length=100, description="Tên danh mục")
-    category_type: str = Field(..., min_length=1, max_length=20, description="Loại danh mục")
+    category_type: str = Field(..., min_length=1, max_length=50, description="Loại danh mục")
     description: Optional[str] = Field(None, max_length=500, description="Mô tả")
     icon: Optional[str] = Field(None, max_length=50, description="Icon")
     color: Optional[str] = Field(None, max_length=7, description="Màu sắc (hex)")
@@ -28,27 +28,24 @@ class CategoryUpdate(BaseModel):
     sort_order: Optional[int] = None
     parent_category_id: Optional[UUID] = None
 
-class CategoryResponse(CategoryBase):
-    category_id: UUID
-    parent_category_id: Optional[UUID] = None
-    is_active: bool
-    sort_order: int
-    created_at: datetime
+class CategoryResponse(BaseModel):
+    category_name: str = Field(alias="CategoryName")
+    category_type: str = Field(alias="CategoryType")
+    category_id: UUID = Field(alias="CategoryID")
+    parent_category_id: Optional[UUID] = Field(alias="ParentCategoryID", default=None)
+    is_active: bool = Field(alias="IsActive")
+    sort_order: int = Field(alias="SortOrder")
+    created_at: datetime = Field(alias="CreatedAt")
     
-    class Config:
-        from_attributes = True
-
-class CategoryWithChildren(CategoryResponse):
-    children: List['CategoryResponse'] = []
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 # User Category Schemas
 class UserCategoryBase(BaseModel):
-    user_id: UUID = Field(..., description="ID người dùng")
-    category_id: UUID = Field(..., description="ID danh mục")
-    custom_name: Optional[str] = Field(None, max_length=100, description="Tên tùy chỉnh")
+    # category_id: Optional[UUID] = Field(None, description="ID danh mục gốc (null nếu là category hoàn toàn tùy chỉnh)")
+    custom_name: str = Field(..., min_length=1, max_length=100, description="Tên tùy chỉnh")
 
 class UserCategoryCreate(UserCategoryBase):
-    pass
+    category_type: Literal["income", "expense"] = Field(..., description="Loại danh mục (income/expense)")  # Cần để phân loại
 
 class UserCategoryUpdate(BaseModel):
     custom_name: Optional[str] = Field(None, max_length=100)
@@ -56,22 +53,38 @@ class UserCategoryUpdate(BaseModel):
 
 class UserCategoryResponse(UserCategoryBase):
     user_category_id: UUID
+    user_id: UUID
+    category_type: Literal["income", "expense"] = Field(..., description="Loại danh mục")
     is_active: bool
     created_at: datetime
-    category: Optional[CategoryResponse] = None  # Thông tin danh mục
+    category: Optional[CategoryResponse] = None  # Thông tin danh mục gốc (null nếu là custom)
+    display_name: str = Field(..., description="Tên hiển thị")
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
+class CategoryDisplayResponse(BaseModel):
+    """Schema cho danh sách display names của user"""
+    display_name: str = Field(..., description="Tên hiển thị")
+    category_type: Literal["income", "expense"] = Field(..., description="Loại danh mục")
+    user_category_id: Optional[UUID] = Field(None, description="ID user category nếu có")
+    category_id: Optional[UUID] = Field(None, description="ID danh mục gốc (null nếu là custom)")
+    is_custom: bool = Field(..., description="Có phải là category hoàn toàn tùy chỉnh không")
+
+    model_config = ConfigDict(from_attributes=True)
 # Response models for API
 class CategoryListResponse(BaseModel):
     categories: List[CategoryResponse]
     total: int
-    page: int
-    per_page: int
+
+    model_config = ConfigDict(from_attributes=True)
 
 class UserCategoryListResponse(BaseModel):
     user_categories: List[UserCategoryResponse]
     total: int
-    page: int
-    per_page: int
+
+    model_config = ConfigDict(from_attributes=True)
+class CategoryDisplayListResponse(BaseModel):
+    display_categories: List[CategoryDisplayResponse]
+    total: int
+
+    model_config = ConfigDict(from_attributes=True)

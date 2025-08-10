@@ -16,7 +16,7 @@ class Category(Base):
         server_default=text("NEWID()")
     )
     CategoryName = Column(Unicode(100), nullable=False, index=True)
-    CategoryType = Column(Unicode(20), nullable=False, index=True)
+    CategoryType = Column(Unicode(50), nullable=False, index=True)
     ParentCategoryID = Column( UNIQUEIDENTIFIER,nullable=True)
     Description = Column(Unicode(500), nullable=True)
     Icon = Column(String(50), nullable=True)
@@ -54,6 +54,7 @@ class UserCategory(Base):
         index=True
     )
     CustomName = Column(Unicode(100), nullable=True)
+    CategoryType = Column(String(50), nullable=False)
     IsActive = Column(Boolean, default=True, nullable=False, index=True)
     CreatedAt = Column(DateTime, default=datetime.utcnow, nullable=False)
     
