@@ -2,11 +2,11 @@ import { FiHome, FiUsers, FiCreditCard, FiDollarSign, FiFileText, FiBarChart2, F
 import { useLocation, Link } from 'react-router-dom';
 
 const navItems = [
-  { icon: FiHome, label: 'Dashboard', path: '/dashboard', color: 'text-blue-400' },
+  { icon: FiBarChart2, label: 'Dashboard', path: '/dashboard', color: 'text-blue-400' },
   { icon: FiMessageSquare, label: 'Chatbot', path: '/chatbot', color: 'text-pink-400' },
   { icon: FiCreditCard, label: 'Transactions', path: '/manual-input', color: 'text-green-400' },
   { icon: FiDollarSign, label: 'Budgets', path: '/budget', color: 'text-yellow-400' },
-  { icon: FiBarChart2, label: 'Analytics', path: '/analytics', color: 'text-purple-400' },
+  // { icon: FiBarChart2, label: 'Analytics', path: '/analytics', color: 'text-purple-400' },
   { icon: FiSettings, label: 'Settings', path: '/settings', color: 'text-gray-400' },
 ];
 

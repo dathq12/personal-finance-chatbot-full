@@ -5,9 +5,13 @@ import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
 import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs.jsx";
 import { ArrowUpRight, Plus, Download, AlertTriangle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Budget = () => {
-
+    const navigate = useNavigate();
+    const handleSave = () => {
+    navigate("/create/budget");
+  };
 
 
     return (
@@ -19,7 +23,7 @@ const Budget = () => {
                         <Button variant="outline">
                             <Download className="w-4 h-4 mr-2" /> Export
                         </Button>
-                        <Button>
+                        <Button onClick={handleSave}>
                             <Plus className="w-4 h-4 mr-2" /> Create Budget
                         </Button>
                     </div>

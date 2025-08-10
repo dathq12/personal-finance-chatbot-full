@@ -14,6 +14,8 @@ import Dashboard from "./pages/Dashboard.jsx"
 import Account from "./pages/Account.jsx"
 import Budget from "./pages/Budget.jsx";
 import Analytics from "./pages/Analytics.jsx";
+import CreateTransaction from "./pages/CreateTransaction.jsx";
+import CreateBudget from "./pages/CreateBudget.jsx";
 
 function AppRoutes() {
   return (
@@ -30,7 +32,9 @@ function AppRoutes() {
       <Route path="/account" element={<Account />} />
       <Route path="*" element={<NotFound />} />
       <Route path="/budget" element={<Budget />} />
-      <Route path="/analytics" element={<Analytics />} />
+      {/* <Route path="/analytics" element={<Analytics />} /> */}
+      <Route path="/create/transaction" element={<CreateTransaction />} />
+      <Route path="/create/budget" element={<CreateBudget />} />
     </Routes>
   );
 }

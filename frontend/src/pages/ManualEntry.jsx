@@ -1,40 +1,98 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../components/Layout/Layout';
+import { useNavigate } from "react-router-dom";
 import { FiFilter, FiPlus, FiSearch } from 'react-icons/fi';
 
 const ManualEntry = () => {
-  const [type, setType] = useState('Thu');
-  const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState('');
-  const [note, setNote] = useState('');
-  const [dateTime, setDateTime] = useState(new Date().toISOString().slice(0, 16));
+  const navigate = useNavigate();
+
+  // State entries lấy từ API
   const [entries, setEntries] = useState([]);
 
-  const handleSave = () => {
-    const newEntry = {
-      id: Date.now(),
-      type,
-      amount,
-      category,
-      note,
-      dateTime,
-    };
-    setEntries([newEntry, ...entries]);
-    setAmount('');
-    setCategory('');
-    setNote('');
-    setDateTime(new Date().toISOString().slice(0, 16));
+  // State filter
+  const [filters, setFilters] = useState({
+    search: '',
+    category_display_name: '',
+    transaction_type: '',
+    date_from: '',
+    date_to: '',
+    // Bạn có thể thêm các filter khác nếu cần
+  });
+
+  // Hàm gọi API lấy dữ liệu transactions theo filter
+  const fetchTransactions = async () => {
+    try {
+      const token = sessionStorage.getItem("token");
+
+      // Build query params từ filters
+      const params = new URLSearchParams();
+
+      if (filters.transaction_type) params.append('transaction_type', filters.transaction_type);
+      if (filters.category_display_name) params.append('category_display_name', filters.category_display_name);
+      if (filters.search) params.append('search', filters.search);
+      if (filters.date_from) params.append('date_from', filters.date_from);
+      if (filters.date_to) params.append('date_to', filters.date_to);
+      // Bạn có thể thêm các tham số khác nếu API cần
+
+      // Mặc định các param khác theo ví dụ của bạn
+      params.append('payment_method', 'cash');
+      params.append('location', 'Hà Nội');
+      params.append('created_by', 'manual');
+      params.append('skip', '0');
+      params.append('limit', '10');
+      params.append('sort_by', 'created_at');
+      params.append('sort_order', 'desc');
+
+      const res = await fetch(`http://127.0.0.1:8000/transactions/?${params.toString()}`, {
+        headers: {
+          'accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) throw new Error(`Error: ${res.status}`);
+
+      const data = await res.json();
+      console.log("API data:", data);
+
+      // Giả sử API trả về mảng data
+      setEntries(data.transaction || []);
+    } catch (error) {
+      console.error("Failed to fetch transactions:", error);
+      setEntries([]);
+    }
   };
+
+  // Handle thay đổi filter input
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  // Khi nhấn nút Apply Filters thì gọi API
+  const handleApplyFilters = () => {
+    fetchTransactions();
+  };
+
+  // Điều hướng tới trang tạo transaction mới
+  const handleSave = () => {
+    navigate("/create/transaction");
+  };
+
+  // Optionally, load data lần đầu khi component mount
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
 
   return (
     <Layout>
       <div className="min-h-screen bg-[#121212] text-white p-6 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Transactions</h1>
-          <div className="space-x-2">
-            <button className="bg-white text-black px-4 py-2 rounded flex items-center gap-1">
-              <FiSearch /> Export
-            </button>
+          <div className="flex space-x-2">
             <button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-1">
               <FiPlus /> Add Transaction
             </button>
@@ -46,26 +104,71 @@ const ManualEntry = () => {
           <h2 className="text-lg font-semibold">Filters</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
             <input
+              name="search"
+              value={filters.search}
+              onChange={handleFilterChange}
               type="text"
               placeholder="Search transactions..."
               className="px-3 py-2 rounded bg-[#121212] border border-gray-700"
             />
-            <select className="px-3 py-2 rounded bg-[#121212] border border-gray-700">
-              <option>All Categories</option>
+            <select
+              name="category_display_name"
+              value={filters.category_display_name}
+              onChange={handleFilterChange}
+              className="px-3 py-2 rounded bg-[#121212] border border-gray-700"
+            >
+              <option value="">All Categories</option>
+              <option value="Thu nhập">Thu nhập</option>
+              <option value="Chi tiêu">Chi tiêu</option>
+              {/* Thêm option category nếu bạn có */}
             </select>
-            <select className="px-3 py-2 rounded bg-[#121212] border border-gray-700">
-              <option>All Types</option>
+            <select
+              name="transaction_type"
+              value={filters.transaction_type}
+              onChange={handleFilterChange}
+              className="px-3 py-2 rounded bg-[#121212] border border-gray-700"
+            >
+              <option value="">All Types</option>
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+              {/* Thêm các loại khác nếu có */}
             </select>
             <input
+              name="date_from"
+              value={filters.date_from}
+              onChange={handleFilterChange}
               type="date"
               className="px-3 py-2 rounded bg-[#121212] border border-gray-700"
+              placeholder="Date from"
+            />
+            <input
+              name="date_to"
+              value={filters.date_to}
+              onChange={handleFilterChange}
+              type="date"
+              className="px-3 py-2 rounded bg-[#121212] border border-gray-700"
+              placeholder="Date to"
             />
           </div>
           <div className="flex gap-2 pt-2">
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-1">
+            <button
+              onClick={handleApplyFilters}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-1"
+            >
               <FiFilter /> Apply Filters
             </button>
-            <button className="px-4 py-2 border border-gray-600 rounded">Reset</button>
+            <button
+              onClick={() => setFilters({
+                search: '',
+                category_display_name: '',
+                transaction_type: '',
+                date_from: '',
+                date_to: '',
+              })}
+              className="px-4 py-2 border border-gray-600 rounded"
+            >
+              Reset
+            </button>
           </div>
         </div>
 
@@ -96,12 +199,12 @@ const ManualEntry = () => {
                   </tr>
                 ) : (
                   entries.map((entry) => (
-                    <tr key={entry.id} className="border-b border-gray-800">
-                      <td>{entry.note}</td>
-                      <td>{entry.category}</td>
-                      <td>{new Date(entry.dateTime).toLocaleDateString()}</td>
-                      <td>{entry.amount}₫</td>
-                      <td>{entry.type}</td>
+                    <tr key={entry.TransactionID} className="border-b border-gray-800">
+                      <td>{entry.description || entry.notes}</td>
+                      <td>{entry.category_display_name}</td>
+                      <td>{new Date(entry.transaction_date).toLocaleDateString()}</td>
+                      <td>{parseFloat(entry.amount).toLocaleString()}₫</td>
+                      <td>{entry.transaction_type}</td>
                       <td>
                         <button className="text-red-500 text-xs">Delete</button>
                       </td>
