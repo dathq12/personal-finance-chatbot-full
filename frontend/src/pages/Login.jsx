@@ -43,9 +43,9 @@ const Login = () => {
 
 
     try {
-      // const res = await API.post('/auth/login', { email, password });
-      // localStorage.setItem('token', res.data.token);
-      navigate('/chatbot');
+      const res = await API.post('/auth/login', { email, password });
+      sessionStorage.setItem("token", res.data.access_token);
+      navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.detail || 'Đăng nhập thất bại.');
     }

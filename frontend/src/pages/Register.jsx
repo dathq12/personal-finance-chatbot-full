@@ -11,7 +11,7 @@ import AuthFooter from '../components/Authen/AuthFooter';
 import { Input } from '../components/ui/input';
 
 const Register = () => {
-  const [fullName, setFullName] = useState('');
+  const [full_name, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [agree, setAgree] = useState(false);
@@ -24,7 +24,7 @@ const Register = () => {
 
     try {
       const response = await API.post('/auth/register', {
-        fullName,
+        full_name,
         email,
         password,
       });
@@ -52,7 +52,7 @@ const Register = () => {
           <Input
             type="text"
             placeholder="Họ và tên"
-            value={fullName}
+            value={full_name}
             onChange={(e) => setFullName(e.target.value)}
           />
           <Input

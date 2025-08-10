@@ -28,6 +28,11 @@
   height: 6px;
 }
 
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1); /* Đảo màu (đen → trắng) */
+  cursor: pointer;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
