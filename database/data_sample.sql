@@ -86,31 +86,32 @@ VALUES
 (@UserID, @CoffeeUCID, 'expense', 45000, N'Trà sữa', '2024-12-05', N'Tiền mặt', 'chatbot');
 
 -- Tạo ngân sách tổng cho tháng 12/2024
-DECLARE @BudgetID UNIQUEIDENTIFIER = NEWID();
-INSERT INTO Budgets (
-    BudgetID, UserID, BudgetName, BudgetType, Amount, PeriodStart, PeriodEnd, 
-    AutoAdjust, IncludeIncome, AlertThreshold, IsActive
-)
-VALUES (
-    @BudgetID, @UserID, N'Ngân sách tháng 12/2024', 'monthly', 10000000,
-    '2024-12-01', '2024-12-31',
-    1, 0, 80.0, 1
-);
+-- 2. Tạo Budget
+-- DECLARE @BudgetID UNIQUEIDENTIFIER = NEWID();
+-- INSERT INTO Budgets (
+--     BudgetID, UserID, BudgetName, BudgetType, Amount, PeriodStart, PeriodEnd,TotalSpent,
+--     AutoAdjust, AlertThreshold, IsActive
+-- )
+-- VALUES (
+--     @BudgetID, @UserID, N'Ngân sách tháng 12/2024', 'monthly', 10000000,
+--     '2024-12-01', '2024-12-31',50000,
+--     1, 80.0, 1
+-- );
 
--- Phân bổ danh mục con (BudgetCategories)
-INSERT INTO BudgetCategories (BudgetID, UserCategoryID, AllocatedAmount, SpentAmount)
-VALUES 
-(@BudgetID, @FoodUCID, 3000000, 2500000),
-(@BudgetID, @RentUCID, 3500000, 3500000),
-(@BudgetID, @TransportUCID, 2000000, 1800000),
-(@BudgetID, @CoffeeUCID, 1500000, 1450000);
+-- -- Phân bổ danh mục con (BudgetCategories)
+-- INSERT INTO BudgetCategories (BudgetID, UserCategoryID, AllocatedAmount, SpentAmount)
+-- VALUES 
+-- (@BudgetID, @FoodUCID, 3000000, 2500000),
+-- (@BudgetID, @RentUCID, 3500000, 3500000),
+-- (@BudgetID, @TransportUCID, 2000000, 1800000),
+-- (@BudgetID, @CoffeeUCID, 1500000, 1450000);
 
--- Tạo cảnh báo giả định (BudgetAlerts)
-INSERT INTO BudgetAlerts (
-    BudgetID, UserID, AlertType, CurrentAmount, BudgetAmount, PercentageUsed, Message
-)
-VALUES 
-(@BudgetID, @UserID, 'warning', 8000000, 10000000, 80.00, N'Bạn đã sử dụng 80% ngân sách tháng 12/2024 cho toàn bộ chi tiêu');
+-- -- Tạo cảnh báo giả định (BudgetAlerts)
+-- INSERT INTO BudgetAlerts (
+--     BudgetID, UserID, AlertType, CurrentAmount, BudgetAmount, PercentageUsed, Message
+-- )
+-- VALUES 
+-- (@BudgetID, @UserID, 'warning', 8000000, 10000000, 80.00, N'Bạn đã sử dụng 80% ngân sách tháng 12/2024 cho toàn bộ chi tiêu');
 
 
 

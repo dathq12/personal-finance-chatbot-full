@@ -50,114 +50,120 @@ def create_category(db: Session, category: CategoryCreate) -> Category:
 # ==================== USER CATEGORY CRUD ====================
 
 def get_all_category_display_names(db: Session, user_id: UUID) -> List[CategoryDisplayResponse]:
-    """Lấy toàn bộ tên danh mục hiển thị của một người (bao gồm cả custom categories)"""
-    # Lấy user categories có liên kết với category gốc
-    linked_results = (
-        db.query(UserCategory, Category)
-        .join(Category, UserCategory.CategoryID == Category.CategoryID)
-        .filter(
-            UserCategory.UserID == user_id, 
-            UserCategory.IsActive == True,
-            Category.IsActive == True
-        )
-        .all()
-    )
+    """Lấy toàn bộ tên danh mục hiển thị của một người, bao gồm:
+       - Category mặc định của hệ thống (dù user chưa dùng)
+       - UserCategory liên kết
+       - UserCategory custom"""
     
-    # Lấy user categories hoàn toàn tùy chỉnh (CategoryID = NULL)
-    custom_results = (
-        db.query(UserCategory)
-        .filter(
-            UserCategory.UserID == user_id,
-            UserCategory.CategoryID.is_(None),
-            UserCategory.IsActive == True
-        )
-        .all()
-    )
-    
+    # Lấy tất cả Category mặc định
+    system_categories = db.query(Category).filter(Category.IsActive == True).all()
+
+    # Lấy toàn bộ UserCategory của user
+    user_categories = db.query(UserCategory).filter(
+        UserCategory.UserID == user_id,
+        UserCategory.IsActive == True
+    ).all()
+    user_category_map = {uc.CategoryID: uc for uc in user_categories if uc.CategoryID}
+
     display_categories = []
-    
-    # Xử lý categories có liên kết
-    for user_category, category in linked_results:
-        display_name = user_category.CustomName if user_category.CustomName else category.CategoryName
+
+    # Thêm tất cả category mặc định (liên kết hoặc chưa dùng)
+    for cat in system_categories:
+        if cat.CategoryID in user_category_map:
+            uc = user_category_map[cat.CategoryID]
+            display_name = uc.CustomName if uc.CustomName else cat.CategoryName
+            is_custom = bool(uc.CustomName)
+            user_category_id = uc.UserCategoryID
+        else:
+            display_name = cat.CategoryName
+            is_custom = False
+            user_category_id = None
+
         display_categories.append(CategoryDisplayResponse(
             display_name=display_name,
-            category_type=category.CategoryType,
-            user_category_id=user_category.UserCategoryID,
-            category_id=category.CategoryID,
-            is_custom=bool(user_category.CustomName)
+            category_type=cat.CategoryType,
+            user_category_id=user_category_id,
+            category_id=cat.CategoryID,
+            is_custom=is_custom
         ))
-    
-    # Xử lý categories hoàn toàn tùy chỉnh
-    for user_category in custom_results:
+
+    # Thêm user categories hoàn toàn custom
+    custom_only = [uc for uc in user_categories if uc.CategoryID is None]
+    for uc in custom_only:
         display_categories.append(CategoryDisplayResponse(
-            display_name=user_category.CustomName,
-            category_type=user_category.CategoryType,  # Lấy từ UserCategory
-            user_category_id=user_category.UserCategoryID,
+            display_name=uc.CustomName,
+            category_type=uc.CategoryType,
+            user_category_id=uc.UserCategoryID,
             category_id=None,
             is_custom=True
         ))
-    
-    # Sắp xếp theo category_type và display_name
+
+    # Sắp xếp
     display_categories.sort(key=lambda x: (x.category_type, x.display_name))
     return display_categories
 
+
 def get_category_display_names_by_type(
-    db: Session, 
-    user_id: UUID, 
+    db: Session,
+    user_id: UUID,
     category_type: str
 ) -> List[CategoryDisplayResponse]:
-    """Lấy danh sách tên hiển thị theo loại danh mục"""
-    # Lấy user categories có liên kết với category gốc
-    linked_results = (
-        db.query(UserCategory, Category)
-        .join(Category, UserCategory.CategoryID == Category.CategoryID)
-        .filter(
-            UserCategory.UserID == user_id,
-            UserCategory.IsActive == True,
-            Category.IsActive == True,
-            Category.CategoryType == category_type
-        )
-        .all()
-    )
+    """Lấy toàn bộ tên danh mục hiển thị theo loại, bao gồm:
+       - Category mặc định của hệ thống (dù user chưa dùng)
+       - UserCategory liên kết
+       - UserCategory custom"""
     
-    # Lấy user categories hoàn toàn tùy chỉnh
-    custom_results = (
-        db.query(UserCategory)
-        .filter(
-            UserCategory.UserID == user_id,
-            UserCategory.CategoryID.is_(None),
-            UserCategory.CategoryType == category_type,
-            UserCategory.IsActive == True
-        )
-        .all()
-    )
-    
+    # Lấy tất cả Category mặc định theo loại
+    system_categories = db.query(Category).filter(
+        Category.IsActive == True,
+        Category.CategoryType == category_type
+    ).all()
+
+    # Lấy toàn bộ UserCategory của user theo loại
+    user_categories = db.query(UserCategory).filter(
+        UserCategory.UserID == user_id,
+        UserCategory.IsActive == True,
+        UserCategory.CategoryType == category_type
+    ).all()
+    user_category_map = {uc.CategoryID: uc for uc in user_categories if uc.CategoryID}
+
     display_categories = []
-    
-    # Xử lý categories có liên kết
-    for user_category, category in linked_results:
-        display_name = user_category.CustomName if user_category.CustomName else category.CategoryName
+
+    # Thêm tất cả category mặc định (liên kết hoặc chưa dùng)
+    for cat in system_categories:
+        if cat.CategoryID in user_category_map:
+            uc = user_category_map[cat.CategoryID]
+            display_name = uc.CustomName if uc.CustomName else cat.CategoryName
+            is_custom = bool(uc.CustomName)
+            user_category_id = uc.UserCategoryID
+        else:
+            display_name = cat.CategoryName
+            is_custom = False
+            user_category_id = None
+
         display_categories.append(CategoryDisplayResponse(
             display_name=display_name,
-            category_type=category.CategoryType,
-            user_category_id=user_category.UserCategoryID,
-            category_id=category.CategoryID,
-            is_custom=bool(user_category.CustomName)
+            category_type=cat.CategoryType,
+            user_category_id=user_category_id,
+            category_id=cat.CategoryID,
+            is_custom=is_custom
         ))
-    
-    # Xử lý categories hoàn toàn tùy chỉnh
-    for user_category in custom_results:
+
+    # Thêm user categories hoàn toàn custom
+    custom_only = [uc for uc in user_categories if uc.CategoryID is None]
+    for uc in custom_only:
         display_categories.append(CategoryDisplayResponse(
-            display_name=user_category.CustomName,
-            category_type=user_category.CategoryType,
-            user_category_id=user_category.UserCategoryID,
+            display_name=uc.CustomName,
+            category_type=uc.CategoryType,
+            user_category_id=uc.UserCategoryID,
             category_id=None,
             is_custom=True
         ))
-    
-    # Sắp xếp theo display_name
+
+    # Sắp xếp
     display_categories.sort(key=lambda x: x.display_name)
     return display_categories
+
 
 def get_category_display_name(db: Session, user_category_id: UUID) -> str:
     """Get the display name of a user category"""

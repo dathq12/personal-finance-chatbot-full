@@ -205,7 +205,7 @@ async def get_my_user_categories(
             
             # If category_id exists but category is None, fetch it separately
             if category_id and not category:
-                category = category_crud.get_category(db, UUID(category_id))
+                category = category_crud.get_category(db, category_id)
             
             # Get display name
             custom_name = None
@@ -220,22 +220,22 @@ async def get_my_user_categories(
             
             # Build the response
             response_categories.append(UserCategoryResponse(
-                user_category_id=UUID(user_category.UserCategoryID),
-                user_id=UUID(user_category.UserID),
-                category_id=UUID(category_id) if category_id else None,
+                user_category_id=user_category.UserCategoryID,
+                user_id=user_category.UserID,
+                category_id=category_id if category_id else None,
                 custom_name=custom_name,
                 category_type=user_category.CategoryType,
                 is_active=user_category.IsActive,
                 created_at=user_category.CreatedAt,
                 category=CategoryResponse(
-                    category_id=UUID(category.CategoryID),
+                    category_id=category.CategoryID,
                     category_name=category.CategoryName,
                     category_type=category.CategoryType,
                     description=category.Description,
                     icon=category.Icon,
                     color=category.Color,
                     is_default=category.IsDefault,
-                    parent_category_id=UUID(category.ParentCategoryID) if category.ParentCategoryID else None,
+                    parent_category_id=category.ParentCategoryID if category.ParentCategoryID else None,
                     is_active=category.IsActive,
                     sort_order=category.SortOrder,
                     created_at=category.CreatedAt
@@ -268,7 +268,7 @@ async def update_user_category(
     """Cập nhật user category"""
     # Kiểm tra quyền sở hữu
     existing_user_category = category_crud.get_user_category(db, user_category_id)
-    if not existing_user_category or UUID(existing_user_category.UserID) != current_user.UserID:
+    if not existing_user_category or existing_user_category.UserID != current_user.UserID:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Không tìm thấy user category"
@@ -289,7 +289,7 @@ async def update_user_category(
     # Lấy thông tin category để trả về (nếu có)
     category = None
     if updated_user_category.CategoryID:
-        category = category_crud.get_category(db, UUID(updated_user_category.CategoryID))
+        category = category_crud.get_category(db, updated_user_category.CategoryID)
     
     display_name = updated_user_category.CustomName
     if not display_name and category:
@@ -298,20 +298,20 @@ async def update_user_category(
     return UserCategoryResponse(
         user_category_id=UUID(updated_user_category.UserCategoryID),
         user_id=UUID(updated_user_category.UserID),
-        category_id=UUID(updated_user_category.CategoryID) if updated_user_category.CategoryID else None,
+        category_id=updated_user_category.CategoryID if updated_user_category.CategoryID else None,
         custom_name=updated_user_category.CustomName,
         category_type=updated_user_category.CategoryType,
         is_active=updated_user_category.IsActive,
         created_at=updated_user_category.CreatedAt,
         category=CategoryResponse(
-            category_id=UUID(category.CategoryID),
+            category_id=category.CategoryID,
             category_name=category.CategoryName,
             category_type=category.CategoryType,
             description=category.Description,
             icon=category.Icon,
             color=category.Color,
             is_default=category.IsDefault,
-            parent_category_id=UUID(category.ParentCategoryID) if category.ParentCategoryID else None,
+            parent_category_id=category.ParentCategoryID if category.ParentCategoryID else None,
             is_active=category.IsActive,
             sort_order=category.SortOrder,
             created_at=category.CreatedAt
