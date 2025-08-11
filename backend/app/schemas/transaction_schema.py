@@ -149,7 +149,7 @@ class TransactionFilter(BaseModel):
             raise ValueError('Sort order must be either "asc" or "desc"')
         return v
     
-    @field_validator('date_from', 'date_to', mode='before')
+    @field_validator('date_from', 'date_to')
     @classmethod
     def parse_custom_date(cls, v):
         if v is None:

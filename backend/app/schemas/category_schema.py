@@ -41,7 +41,7 @@ class CategoryResponse(BaseModel):
 
 # User Category Schemas
 class UserCategoryBase(BaseModel):
-    # category_id: Optional[UUID] = Field(None, description="ID danh mục gốc (null nếu là category hoàn toàn tùy chỉnh)")
+    category_id: Optional[UUID] = Field(None, description="ID danh mục gốc (null nếu là category hoàn toàn tùy chỉnh)")
     custom_name: str = Field(..., min_length=1, max_length=100, description="Tên tùy chỉnh")
 
 class UserCategoryCreate(UserCategoryBase):
