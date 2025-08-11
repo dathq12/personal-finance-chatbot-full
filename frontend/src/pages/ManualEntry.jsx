@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Layout from '../components/Layout/Layout';
 import { useNavigate } from "react-router-dom";
 import { FiFilter, FiPlus, FiSearch } from 'react-icons/fi';
+import API from '../services/api';
 
 const ManualEntry = () => {
   const navigate = useNavigate();
@@ -34,32 +35,51 @@ const ManualEntry = () => {
       if (filters.date_to) params.append('date_to', filters.date_to);
       // Bạn có thể thêm các tham số khác nếu API cần
 
-      // Mặc định các param khác theo ví dụ của bạn
-      params.append('payment_method', 'cash');
-      params.append('location', 'Hà Nội');
-      params.append('created_by', 'manual');
+      // // Mặc định các param khác theo ví dụ của bạn
+      // params.append('payment_method', 'cash');
+      // params.append('location', 'Hà Nội');
+      // params.append('created_by', 'manual');
       params.append('skip', '0');
       params.append('limit', '10');
-      params.append('sort_by', 'created_at');
+      params.append('sort_by', 'CreatedAt');
       params.append('sort_order', 'desc');
 
-      const res = await fetch(`http://127.0.0.1:8000/transactions/?${params.toString()}`, {
+
+      const res = await API.get(`/transactions/?${params.toString()}`, {
         headers: {
-          'accept': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
         }
       });
-
-      if (!res.ok) throw new Error(`Error: ${res.status}`);
-
-      const data = await res.json();
+      const data = res.data;
       console.log("API data:", data);
 
       // Giả sử API trả về mảng data
-      setEntries(data.transaction || []);
+      setEntries(res.data.transaction || []);
+      console.log('Entries set:', res.data.transaction);
     } catch (error) {
       console.error("Failed to fetch transactions:", error);
       setEntries([]);
+    }
+  };
+
+  const deleteTransactions = async (TransactionID) => {
+    try {
+      const token = sessionStorage.getItem("token")
+
+      const res = await API.delete(`/transactions/${TransactionID}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+      });
+
+      console.log("API data:", res.data);
+
+      // Sau khi xoá thành công, bạn có thể gọi lại fetch để cập nhật danh sách transactions
+      fetchTransactions()
+    } catch (error) {
+      console.error("Delete transaction failed:", error);
     }
   };
 
@@ -134,20 +154,24 @@ const ManualEntry = () => {
               {/* Thêm các loại khác nếu có */}
             </select>
             <input
+              type="text"
               name="date_from"
               value={filters.date_from}
               onChange={handleFilterChange}
-              type="date"
-              className="px-3 py-2 rounded bg-[#121212] border border-gray-700"
               placeholder="Date from"
+              className="px-3 py-2 rounded bg-[#121212] border border-gray-700"
+              onFocus={(e) => e.target.type = "date"}
+              onBlur={(e) => e.target.type = "text"}
             />
             <input
+              type="text"
               name="date_to"
               value={filters.date_to}
               onChange={handleFilterChange}
-              type="date"
               className="px-3 py-2 rounded bg-[#121212] border border-gray-700"
               placeholder="Date to"
+              onFocus={(e) => e.target.type = "date"}
+              onBlur={(e) => e.target.type = "text"}
             />
           </div>
           <div className="flex gap-2 pt-2">
@@ -174,10 +198,10 @@ const ManualEntry = () => {
 
         {/* Transaction Table */}
         <div className="bg-[#1e1e1e] p-4 rounded">
-          <div className="flex gap-2 mb-4">
+          {/* <div className="flex gap-2 mb-4">
             <button className="bg-gray-800 px-4 py-2 rounded">List View</button>
             <button className="bg-gray-700 px-4 py-2 rounded text-gray-400">Categories</button>
-          </div>
+          </div> */}
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
@@ -206,7 +230,9 @@ const ManualEntry = () => {
                       <td>{parseFloat(entry.amount).toLocaleString()}₫</td>
                       <td>{entry.transaction_type}</td>
                       <td>
-                        <button className="text-red-500 text-xs">Delete</button>
+                        <button
+                          onClick={() => deleteTransactions(entry.TransactionID)}
+                          className="text-red-500 text-xs">Delete</button>
                       </td>
                     </tr>
                   ))

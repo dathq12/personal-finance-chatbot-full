@@ -94,7 +94,7 @@ export default function CreateBudget() {
           <div className="mb-4">
             <label className="block text-sm mb-1">Total Budget Amount</label>
             <div className="flex items-center">
-              <span className="bg-gray-800 px-3 border border-gray-600 border-r-0 rounded-l">$</span>
+              <span className="bg-gray-800 px-3 border border-gray-600 border-r-0 rounded-l">VNĐ</span>
               <input
                 type="number"
                 name="totalAmount"
@@ -142,7 +142,7 @@ export default function CreateBudget() {
           </div>
 
           {/* Quick Start Templates */}
-          <div>
+          {/* <div>
             <h3 className="text-sm font-medium mb-3">Quick Start Templates</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {[
@@ -172,7 +172,7 @@ export default function CreateBudget() {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* Actions */}
