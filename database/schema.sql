@@ -36,7 +36,7 @@ CREATE TABLE UserSessions (
 CREATE TABLE Categories (
     CategoryID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     CategoryName NVARCHAR(100) NOT NULL,
-    CategoryType NVARCHAR(20) NOT NULL CHECK (CategoryType IN ('income', 'expense')),
+    CategoryType NVARCHAR(50) NOT NULL CHECK (CategoryType IN ('income', 'expense')),
     ParentCategoryID UNIQUEIDENTIFIER REFERENCES Categories(CategoryID),
     Description NVARCHAR(500),
     Icon NVARCHAR(50),
@@ -52,9 +52,10 @@ CREATE TABLE UserCategories (
     UserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID) ON DELETE CASCADE,
     CategoryID UNIQUEIDENTIFIER NULL REFERENCES Categories(CategoryID),
     CustomName NVARCHAR(100),
+    CategoryType NVARCHAR(50) NOT NULL CHECK (CategoryType IN ('income', 'expense')),
     IsActive BIT DEFAULT 1,
     CreatedAt DATETIME2 DEFAULT GETDATE(),
-    UNIQUE(UserID, CategoryID)
+    UNIQUE(UserID, CategoryID,CustomName)
 );
 
 -- 3. GIAO DỊCH
@@ -80,63 +81,82 @@ CREATE TABLE Transactions (
 -- 4. NGÂN SÁCH
 -- ===================================================================
 
+-- ==================== BUDGETS ====================
 CREATE TABLE Budgets (
     BudgetID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    UserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID) ON DELETE CASCADE,
+    UserID UNIQUEIDENTIFIER NOT NULL,
     
+    -- Budget Information
     BudgetName NVARCHAR(255) NOT NULL,
     BudgetType NVARCHAR(20) NOT NULL CHECK (BudgetType IN ('monthly', 'weekly', 'yearly')),
     Amount DECIMAL(15,2) NOT NULL CHECK (Amount > 0),
     
+    -- Period Information
     PeriodStart DATE NOT NULL,
     PeriodEnd DATE NOT NULL,
     
-    AutoAdjust BIT DEFAULT 0,            -- Tự động điều chỉnh các danh mục con khi thay đổi tổng ngân sách
-    IncludeIncome BIT DEFAULT 0,         -- Bao gồm cả thu nhập (1) hay chỉ chi tiêu (0)
-
+    -- Calculated and Configuration Fields
+    TotalSpent DECIMAL(15,2) DEFAULT 0 CHECK (TotalSpent >= 0),
+    AutoAdjust BIT DEFAULT 0,
     AlertThreshold DECIMAL(5,2) DEFAULT 80.00 CHECK (AlertThreshold BETWEEN 0 AND 100),
     IsActive BIT DEFAULT 1,
 
-    CreatedAt DATETIME2 DEFAULT GETDATE(),
-    UpdatedAt DATETIME2 DEFAULT GETDATE()
-);
-
-
-CREATE TABLE BudgetAlerts (
-    AlertID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),           -- Khóa chính
-    BudgetID UNIQUEIDENTIFIER NOT NULL REFERENCES Budgets(BudgetID) , -- Liên kết tới ngân sách
-    UserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID) ,       -- Người dùng liên quan
-
-    AlertType NVARCHAR(20) NOT NULL 
-        CHECK (AlertType IN ('warning', 'exceeded', 'near_limit')), -- Loại cảnh báo:
-        -- 'warning'     → Cảnh báo sớm (ví dụ: vượt 70%)
-        -- 'near_limit' → Gần vượt mức (ví dụ: 90%)
-        -- 'exceeded'   → Đã vượt quá ngân sách
-
-    CurrentAmount DECIMAL(15,2) NOT NULL,   -- Số tiền đã chi tiêu
-    BudgetAmount DECIMAL(15,2) NOT NULL,    -- Ngân sách đã đặt
-    PercentageUsed DECIMAL(5,2) NOT NULL,   -- % đã sử dụng = Current / Budget * 100
-
-    Message NVARCHAR(MAX),                  -- Nội dung thông báo chi tiết (tùy chỉnh)
-    IsRead BIT DEFAULT 0,                   -- Đánh dấu đã đọc thông báo hay chưa
-
-    CreatedAt DATETIME2 DEFAULT GETDATE()   -- Thời gian tạo cảnh báo
-);
-
-
-CREATE TABLE BudgetCategories (
-    BudgetCategoryID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    BudgetID UNIQUEIDENTIFIER NOT NULL REFERENCES Budgets(BudgetID) ,
-    UserCategoryID UNIQUEIDENTIFIER NOT NULL REFERENCES UserCategories(UserCategoryID),
-
-    AllocatedAmount DECIMAL(15,2) NOT NULL CHECK (AllocatedAmount >= 0),
-    SpentAmount DECIMAL(15,2) DEFAULT 0 CHECK (SpentAmount >= 0), -- Tổng chi tiêu thực tế (tính toán hoặc lưu để tối ưu)
-
+    -- Timestamps
     CreatedAt DATETIME2 DEFAULT GETDATE(),
     UpdatedAt DATETIME2 DEFAULT GETDATE(),
 
-    UNIQUE (BudgetID, UserCategoryID)
+    -- Foreign Key Constraints
+    CONSTRAINT FK_Budgets_UserID FOREIGN KEY (UserID) REFERENCES Users(UserID),
+    
+    -- Check Constraints
+    CONSTRAINT CK_Budgets_PeriodDates CHECK (PeriodEnd > PeriodStart)
 );
+
+
+-- ==================== BUDGET CATEGORIES TABLE ====================
+CREATE TABLE BudgetCategories (
+    BudgetCategoryID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    BudgetID UNIQUEIDENTIFIER NOT NULL,
+    UserCategoryID UNIQUEIDENTIFIER NOT NULL,
+
+    -- Amount Information
+    AllocatedAmount DECIMAL(15,2) NOT NULL CHECK (AllocatedAmount >= 0),
+    SpentAmount DECIMAL(15,2) DEFAULT 0 CHECK (SpentAmount >= 0),
+
+    -- Timestamps
+    CreatedAt DATETIME2 DEFAULT GETDATE(),
+    UpdatedAt DATETIME2 DEFAULT GETDATE(),
+
+    -- Foreign Key Constraints
+    CONSTRAINT FK_BudgetCategories_BudgetID FOREIGN KEY (BudgetID) REFERENCES Budgets(BudgetID),
+    CONSTRAINT FK_BudgetCategories_UserCategoryID FOREIGN KEY (UserCategoryID) REFERENCES UserCategories(UserCategoryID),
+
+    -- Unique Constraints
+    CONSTRAINT UQ_BudgetCategories_Budget_Category UNIQUE (BudgetID, UserCategoryID)
+);
+
+-- ==================== BUDGET ALERTS TABLE ====================
+CREATE TABLE BudgetAlerts (
+    AlertID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    BudgetID UNIQUEIDENTIFIER NOT NULL,
+    BudgetCategoryID UNIQUEIDENTIFIER NULL, -- Optional: specific category alert
+    UserID UNIQUEIDENTIFIER NOT NULL,
+
+    -- Alert Information
+    AlertType NVARCHAR(20) NOT NULL CHECK (AlertType IN ('warning', 'near_limit', 'exceeded', 'threshold')),
+    CurrentAmount DECIMAL(15,2) NOT NULL CHECK (CurrentAmount >= 0),
+    PercentageUsed DECIMAL(5,2) NOT NULL CHECK (PercentageUsed >= 0),
+    Message NVARCHAR(MAX) NULL,
+    IsRead BIT DEFAULT 0,
+
+    -- Timestamp
+    CreatedAt DATETIME2 DEFAULT GETDATE(),
+
+    -- Foreign Key Constraints
+    CONSTRAINT FK_BudgetAlerts_BudgetID FOREIGN KEY (BudgetID) REFERENCES Budgets(BudgetID) ,
+    CONSTRAINT FK_BudgetAlerts_BudgetCategoryID FOREIGN KEY (BudgetCategoryID) REFERENCES BudgetCategories(BudgetCategoryID),
+    CONSTRAINT FK_BudgetAlerts_UserID FOREIGN KEY (UserID) REFERENCES Users(UserID));
+
 
 -- 5. CHATBOT
 -- ===================================================================
@@ -254,13 +274,24 @@ CREATE INDEX IX_Categories_Type ON Categories(CategoryType);
 CREATE INDEX IX_Categories_Parent ON Categories(ParentCategoryID);
 
 CREATE INDEX IX_Transactions_UserID_Date ON Transactions(UserID, TransactionDate DESC);
-CREATE INDEX IX_Transactions_CategoryID ON Transactions(CategoryID);
+CREATE INDEX IX_Transactions_UserCategoryID ON Transactions(UserCategoryID);
 CREATE INDEX IX_Transactions_Type ON Transactions(TransactionType);
 
-CREATE INDEX IX_Budgets_User_Active ON Budgets(UserID, IsActive);
-CREATE INDEX IX_Budgets_Period ON Budgets(PeriodStart, PeriodEnd);
+-- Create indexes separately for Budgets table
+CREATE INDEX IX_Budgets_UserID ON Budgets(UserID);
+CREATE INDEX IX_Budgets_BudgetType ON Budgets(BudgetType);
+CREATE INDEX IX_Budgets_PeriodDates ON Budgets(PeriodStart, PeriodEnd);
+CREATE INDEX IX_Budgets_IsActive ON Budgets(IsActive);
 
-CREATE INDEX IX_BudgetAlerts_User_Read ON BudgetAlerts(UserID, IsRead);
+-- Create indexes separately for BudgetCategories table
+CREATE INDEX IX_BudgetCategories_BudgetID ON BudgetCategories(BudgetID);
+CREATE INDEX IX_BudgetCategories_UserCategoryID ON BudgetCategories(UserCategoryID);
+
+-- Create indexes separately for BudgetAlerts table
+CREATE INDEX IX_BudgetAlerts_BudgetID ON BudgetAlerts(BudgetID);
+CREATE INDEX IX_BudgetAlerts_UserID ON BudgetAlerts(UserID);
+CREATE INDEX IX_BudgetAlerts_IsRead ON BudgetAlerts(IsRead);
+CREATE INDEX IX_BudgetAlerts_CreatedAt ON BudgetAlerts(CreatedAt);
 
 CREATE INDEX IX_ChatMessages_Session ON ChatMessages(SessionID);
 CREATE INDEX IX_ChatMessages_User ON ChatMessages(UserID);

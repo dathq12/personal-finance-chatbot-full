@@ -1,101 +1,85 @@
 # models/budget_model.py
-from sqlalchemy import Column, String, Boolean, Integer, DateTime, ForeignKey, text, Unicode, DECIMAL, Date
+from sqlalchemy import Column, String, Date, DateTime, Boolean, ForeignKey, Numeric, Text
 from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER
 from sqlalchemy.orm import relationship
-from app.database import Base
-from datetime import datetime, date
+from datetime import datetime
 import uuid
+from database import Base
 
 class Budget(Base):
     __tablename__ = "Budgets"
     __table_args__ = {'extend_existing': True}
-    
-    BudgetID = Column(
-        UNIQUEIDENTIFIER, 
-        primary_key=True, 
-        default=lambda: str(uuid.uuid4()),
-        server_default=text("NEWID()")
-    )
-    UserID = Column(
-        UNIQUEIDENTIFIER, 
-        nullable=False,
-        index=True
-    )
-    BudgetName = Column(Unicode(255), nullable=False)
-    BudgetType = Column(Unicode(20), nullable=False)  # 'monthly', 'weekly', 'yearly'
-    Amount = Column(DECIMAL(15, 2), nullable=False)
-    
-    PeriodStart = Column(Date, nullable=False)
-    PeriodEnd = Column(Date, nullable=False)
-    
-    AutoAdjust = Column(Boolean, default=False, nullable=False)
-    IncludeIncome = Column(Boolean, default=False, nullable=False)
-    AlertThreshold = Column(DECIMAL(5, 2), default=80.00, nullable=False)
-    IsActive = Column(Boolean, default=True, nullable=False, index=True)
-    
-    CreatedAt = Column(DateTime, default=datetime.utcnow, nullable=False)
-    UpdatedAt = Column(DateTime, default=datetime.utcnow, nullable=False)
-    
-    # Relationships
-    # budget_categories = relationship("BudgetCategory", back_populates="budget", cascade="all, delete-orphan")
-    # budget_alerts = relationship("BudgetAlert", back_populates="budget", cascade="all, delete-orphan")
 
-class BudgetAlert(Base):
-    __tablename__ = "BudgetAlerts"
-    __table_args__ = {'extend_existing': True}
+   # Primary key
+    BudgetID = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4)
+    UserID = Column(UNIQUEIDENTIFIER, nullable=False)
     
-    AlertID = Column(
-        UNIQUEIDENTIFIER, 
-        primary_key=True, 
-        default=lambda: str(uuid.uuid4()),
-        server_default=text("NEWID()")
-    )
-    BudgetID = Column(
-        UNIQUEIDENTIFIER, 
-        nullable=False,
-        index=True
-    )
-    UserID = Column(
-        UNIQUEIDENTIFIER, 
-        nullable=False,
-        index=True
-    )
-    AlertType = Column(Unicode(20), nullable=False)  # 'warning', 'exceeded', 'near_limit'
-    CurrentAmount = Column(DECIMAL(15, 2), nullable=False)
-    BudgetAmount = Column(DECIMAL(15, 2), nullable=False)
-    PercentageUsed = Column(DECIMAL(5, 2), nullable=False)
-    Message = Column(Unicode, nullable=True)
-    IsRead = Column(Boolean, default=False, nullable=False)
-    CreatedAt = Column(DateTime, default=datetime.utcnow, nullable=False)
+    # Budget details - mapped từ Pydantic schema
+    BudgetName = Column(String(255), nullable=False)  # budget_name
+    BudgetType = Column(String(20), nullable=False)   # budget_type: monthly, weekly, yearly
+    Amount = Column(Numeric(15,2), nullable=False)    # amount
     
-    # Relationships
-    # budget = relationship("Budget", back_populates="budget_alerts")
+    # Period information
+    PeriodStart = Column(Date, nullable=False)        # period_start
+    PeriodEnd = Column(Date, nullable=False)          # period_end
+    
+    # Calculated and configuration fields
+    TotalSpent = Column(Numeric(15,2), default=0)     # total_spent (calculated)
+    AutoAdjust = Column(Boolean, default=False)       # auto_adjust
+    AlertThreshold = Column(Numeric(5,2), default=80.0)  # alert_threshold
+    IsActive = Column(Boolean, default=True)          # is_active
+    
+    # Timestamps
+    CreatedAt = Column(DateTime, default=datetime.utcnow)
+    UpdatedAt = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships (optional)
+    # categories = relationship("BudgetCategory", back_populates="budget", cascade="all, delete")
+    # alerts = relationship("BudgetAlert", back_populates="budget", cascade="all, delete")
 
 class BudgetCategory(Base):
     __tablename__ = "BudgetCategories"
     __table_args__ = {'extend_existing': True}
+
+    # Primary key
+    BudgetCategoryID = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4)
     
-    BudgetCategoryID = Column(
-        UNIQUEIDENTIFIER, 
-        primary_key=True, 
-        default=lambda: str(uuid.uuid4()),
-        server_default=text("NEWID()")
-    )
-    BudgetID = Column(
-        UNIQUEIDENTIFIER, 
-        nullable=False,
-        index=True
-    )
-    UserCategoryID = Column(
-        UNIQUEIDENTIFIER, 
-        nullable=False,
-        index=True
-    )
-    AllocatedAmount = Column(DECIMAL(15, 2), nullable=False)
-    SpentAmount = Column(DECIMAL(15, 2), default=0, nullable=False)
-    CreatedAt = Column(DateTime, default=datetime.utcnow, nullable=False)
-    UpdatedAt = Column(DateTime, default=datetime.utcnow, nullable=False)
+    # Foreign keys
+    BudgetID = Column(UNIQUEIDENTIFIER, nullable=False)
+    UserCategoryID = Column(UNIQUEIDENTIFIER, nullable=False)
+    
+    # Amount fields - mapped từ Pydantic schema
+    AllocatedAmount = Column(Numeric(15,2), nullable=False)  # allocated_amount
+    SpentAmount = Column(Numeric(15,2), default=0)           # spent_amount (calculated)
+    
+    # Timestamps
+    CreatedAt = Column(DateTime, default=datetime.utcnow)
+    UpdatedAt = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    # budget = relationship("Budget", back_populates="budget_categories")
-    # user_category = relationship("UserCategory", back_populates="budget_categories")
+    # budget = relationship("Budget", back_populates="categories")
+    # alerts = relationship("BudgetAlert", back_populates="budget_category", cascade="all, delete-orphan")
+
+class BudgetAlert(Base):
+    __tablename__ = "BudgetAlerts"
+    __table_args__ = {'extend_existing': True}
+# Primary key
+    AlertID = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4)
+    
+    # Foreign keys
+    BudgetID = Column(UNIQUEIDENTIFIER,  nullable=False)
+    BudgetCategoryID = Column(UNIQUEIDENTIFIER,  nullable=True)
+    UserID = Column(UNIQUEIDENTIFIER,  nullable=False)
+    
+    # Alert details - mapped từ Pydantic schema
+    AlertType = Column(String(20), nullable=False)        # alert_type
+    CurrentAmount = Column(Numeric(15,2), nullable=False) # current_amount
+    PercentageUsed = Column(Numeric(5,2), nullable=False) # percentage_used
+    Message = Column(Text, nullable=True)                 # message
+    IsRead = Column(Boolean, default=False)               # is_read
+    
+    # Timestamp
+    CreatedAt = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships (optional)
+    # budget = relationship("Budget", back_populates="alerts")
