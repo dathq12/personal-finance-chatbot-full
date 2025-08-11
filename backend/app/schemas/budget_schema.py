@@ -110,7 +110,7 @@ class BudgetCategoryResponse(BaseModel):
 # ===== Budget Overview & Analysis =====
 class BudgetCategoryOverview(BaseModel):
     """Budget category overview with actual spending"""
-    category_id: UUID
+    user_category_id: UUID
     category_name: str
     allocated_amount: Decimal
     spent_amount: Decimal

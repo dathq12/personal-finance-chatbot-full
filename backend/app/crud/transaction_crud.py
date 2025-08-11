@@ -431,9 +431,21 @@ def get_transaction_summary(
         query = query.filter(Transaction.TransactionDate <= date_to)
 
     result = query.first()
-    
+
+    # Nếu không có kết quả hoặc tất cả đều None
+    if not result or (result.total_income is None and result.total_expense is None):
+        return {
+            "message": "Không có giao dịch trong khoảng thời gian này",
+            "total_income": 0,
+            "total_expense": 0,
+            "net_amount": 0
+        }
+
+    total_income = result.total_income or 0
+    total_expense = result.total_expense or 0
+
     return {
-        'total_income': result.total_income if result.total_income else 0,
-        'total_expense': result.total_expense if result.total_expense else 0,
-        'net_amount': (result.total_income - result.total_expense) if result else 0
+        'total_income': total_income,
+        'total_expense': total_expense,
+        'net_amount': total_income - total_expense
     }

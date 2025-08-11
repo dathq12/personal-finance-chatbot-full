@@ -7,6 +7,7 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 from fastapi import HTTPException, status
 
+from models.transaction import Transaction
 from models.budget import Budget, BudgetCategory, BudgetAlert
 from schemas.budget_schema import (
     BudgetCreate, 
@@ -341,6 +342,33 @@ def get_actual_spending_by_category(
     
     return {row.UserCategoryID: Decimal(row.total_spent or 0) for row in results}
 
+def update_budget_spent_amounts(
+    db: Session,
+    user_id: UUID,
+    budget_id: UUID
+) -> None:
+    """
+    Update SpentAmount for all categories in a budget
+    """
+    # Lấy toàn bộ budget categories thuộc budget của user
+    categories = db.query(BudgetCategory).filter(
+        BudgetCategory.BudgetID == budget_id
+    ).all()
+
+    for category in categories:
+        spent_total = (
+            db.query(func.coalesce(func.sum(Transaction.Amount), 0))
+            .filter(
+                Transaction.UserID == user_id,
+                Transaction.UserCategoryID == category.UserCategoryID,
+                Transaction.TransactionType == 'expense'
+            )
+            .scalar()
+        )
+        category.SpentAmount = spent_total
+
+    db.commit()
+
 def get_budget_overview(
     db: Session,
     user_id: UUID,
@@ -376,7 +404,7 @@ def get_budget_overview(
         variance_percentage = (variance / bc.allocated_amount * 100) if bc.allocated_amount > 0 else Decimal('0')
         
         category_overview = BudgetCategoryOverview(
-            category_id=bc.UserCategoryID,
+            user_category_id=bc.UserCategoryID,
             category_name=category_names.get(bc.UserCategoryID, "Unknown Category"),
             allocated_amount=bc.allocated_amount,
             spent_amount=spent,
