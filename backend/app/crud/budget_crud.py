@@ -23,6 +23,7 @@ from schemas.budget_schema import (
     BudgetVsActualResponse,
     BudgetPerformanceMetrics
 )
+from crud.category_crud import get_category_display_name, get_user_category_id_by_display_name
 
 def create_budget(
     db: Session, 
@@ -254,9 +255,21 @@ def create_budget_category(
     if not budget:
         return None
 
+    user_category_id = get_user_category_id_by_display_name(
+        db=db,
+        user_id=user_id,
+        display_name=category_data.category_display_name,
+        transaction_type= "expense"  # Assuming expense category for budget
+    )
+    if not user_category_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Không tìm thấy danh mục '{category_data.category_display_name}'"
+        )
+
     db_category = BudgetCategory(
         BudgetID=budget_id,
-        UserCategoryID=category_data.user_category_id,
+        UserCategoryID= user_category_id,
         AllocatedAmount=category_data.allocated_amount
     )
     db.add(db_category)
@@ -267,6 +280,7 @@ def create_budget_category(
         'BudgetCategoryID': db_category.BudgetCategoryID,
         'BudgetID': db_category.BudgetID,
         'UserCategoryID': db_category.UserCategoryID,
+        'category_display_name': category_data.category_display_name,
         'allocated_amount': db_category.AllocatedAmount,
         'spent_amount': db_category.SpentAmount,
         'CreatedAt': db_category.CreatedAt,
@@ -290,6 +304,7 @@ def get_budget_categories(
     if not budget:
         return []
 
+
     categories = db.query(BudgetCategory).filter(
         BudgetCategory.BudgetID == budget_id
     ).all()
@@ -300,6 +315,9 @@ def get_budget_categories(
             'BudgetCategoryID': category.BudgetCategoryID,
             'BudgetID': category.BudgetID,
             'UserCategoryID': category.UserCategoryID,
+            'category_display_name': get_category_display_name(
+                db=db,
+                user_category_id=category.UserCategoryID),
             'allocated_amount': category.AllocatedAmount,
             'spent_amount': category.SpentAmount,
             'CreatedAt': category.CreatedAt,
@@ -340,7 +358,7 @@ def get_actual_spending_by_category(
         'date_to': date_to
     }).fetchall()
     
-    return {row.UserCategoryID: Decimal(row.total_spent or 0) for row in results}
+    return {UUID(row.UserCategoryID): Decimal(row.total_spent or 0) for row in results}
 
 def update_budget_spent_amounts(
     db: Session,
@@ -504,12 +522,12 @@ def get_category_display_names(db: Session, user_id: UUID) -> Dict[UUID, str]:
             uc.UserCategoryID,
             COALESCE(uc.CustomName, c.CategoryName) as category_display_name
         FROM UserCategories uc
-        JOIN Categories c ON uc.CategoryID = c.CategoryID
+        LEFT JOIN Categories c ON uc.CategoryID = c.CategoryID
         WHERE uc.UserID = :user_id
     """)
     
     results = db.execute(query, {'user_id': user_id}).fetchall()
-    return {row.UserCategoryID: row.category_display_name for row in results}
+    return {UUID(row.UserCategoryID): row.category_display_name for row in results}
 
 def get_spending_trend(
     db: Session,

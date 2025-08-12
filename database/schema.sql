@@ -116,8 +116,8 @@ CREATE TABLE Budgets (
 -- ==================== BUDGET CATEGORIES TABLE ====================
 CREATE TABLE BudgetCategories (
     BudgetCategoryID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    BudgetID UNIQUEIDENTIFIER NOT NULL,
-    UserCategoryID UNIQUEIDENTIFIER NOT NULL,
+    BudgetID UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES Budgets(BudgetID) ON DELETE CASCADE,
+    UserCategoryID UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES UserCategories(UserCategoryID) ON DELETE CASCADE,
 
     -- Amount Information
     AllocatedAmount DECIMAL(15,2) NOT NULL CHECK (AllocatedAmount >= 0),
@@ -127,10 +127,6 @@ CREATE TABLE BudgetCategories (
     CreatedAt DATETIME2 DEFAULT GETDATE(),
     UpdatedAt DATETIME2 DEFAULT GETDATE(),
 
-    -- Foreign Key Constraints
-    CONSTRAINT FK_BudgetCategories_BudgetID FOREIGN KEY (BudgetID) REFERENCES Budgets(BudgetID),
-    CONSTRAINT FK_BudgetCategories_UserCategoryID FOREIGN KEY (UserCategoryID) REFERENCES UserCategories(UserCategoryID),
-
     -- Unique Constraints
     CONSTRAINT UQ_BudgetCategories_Budget_Category UNIQUE (BudgetID, UserCategoryID)
 );
@@ -138,9 +134,9 @@ CREATE TABLE BudgetCategories (
 -- ==================== BUDGET ALERTS TABLE ====================
 CREATE TABLE BudgetAlerts (
     AlertID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    BudgetID UNIQUEIDENTIFIER NOT NULL,
-    BudgetCategoryID UNIQUEIDENTIFIER NULL, -- Optional: specific category alert
-    UserID UNIQUEIDENTIFIER NOT NULL,
+    BudgetID UNIQUEIDENTIFIER NOT NULL REFERENCES Budgets(BudgetID) ON DELETE CASCADE,
+    BudgetCategoryID UNIQUEIDENTIFIER  REFERENCES BudgetCategories(BudgetCategoryID), -- Optional: specific category alert
+    UserID UNIQUEIDENTIFIER NOT NULL REFERENCES Users(UserID) ON DELETE CASCADE,
 
     -- Alert Information
     AlertType NVARCHAR(20) NOT NULL CHECK (AlertType IN ('warning', 'near_limit', 'exceeded', 'threshold')),
@@ -151,11 +147,7 @@ CREATE TABLE BudgetAlerts (
 
     -- Timestamp
     CreatedAt DATETIME2 DEFAULT GETDATE(),
-
-    -- Foreign Key Constraints
-    CONSTRAINT FK_BudgetAlerts_BudgetID FOREIGN KEY (BudgetID) REFERENCES Budgets(BudgetID) ,
-    CONSTRAINT FK_BudgetAlerts_BudgetCategoryID FOREIGN KEY (BudgetCategoryID) REFERENCES BudgetCategories(BudgetCategoryID),
-    CONSTRAINT FK_BudgetAlerts_UserID FOREIGN KEY (UserID) REFERENCES Users(UserID));
+);
 
 
 -- 5. CHATBOT
