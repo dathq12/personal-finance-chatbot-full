@@ -14,55 +14,8 @@ from schemas.transaction_schema import (
     TransactionResponse,
     TransactionFilter,
     TransactionListResponse)
-from  crud.category_crud import get_category_display_name
+from  crud.category_crud import get_category_display_name, get_user_category_id_by_display_name
 
-def get_user_category_id_by_display_name(
-    db: Session, 
-    user_id: UUID, 
-    display_name: str,
-    transaction_type: str):
-    """Get user category ID by display name and transaction type"""
-    result = (
-        db.query(UserCategory)
-        .join(Category, UserCategory.CategoryID == Category.CategoryID)
-        .filter(
-            UserCategory.UserID == user_id,
-            UserCategory.IsActive == True,
-            Category.CategoryType == transaction_type,
-            (
-                (UserCategory.CustomName == display_name) |
-                ((UserCategory.CustomName.is_(None)) & (Category.CategoryName == display_name))
-            )
-        )
-        .first()
-    )
-    if not result:
-        print(f"Display name nhận được: '{display_name}'")
-        print(f"Transaction type nhận được: '{transaction_type}'")
-        category = (
-            db.query(Category)
-            .filter(
-                Category.IsActive == True,
-                Category.CategoryType == transaction_type,
-                Category.CategoryName == display_name
-            )
-            .first()
-        )
-        print("Category tìm thấy:", category)
-        if category:
-            # Tạo user category mới cho user
-            new_user_cat = UserCategory(
-                UserID=user_id,
-                CategoryID=category.CategoryID,
-                CustomName=None,
-                IsActive=True
-            )
-            db.add(new_user_cat)
-            db.commit()
-            db.refresh(new_user_cat)
-            return new_user_cat.UserCategoryID
-        return None
-    return result.UserCategoryID
 
 def create_transaction(
     db: Session, 

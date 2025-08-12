@@ -36,6 +36,7 @@ class BudgetBase(BaseModel):
         return v
 
 class BudgetCreate(BudgetBase):
+    # category_display_name: str = Field(...,max_length=100, description= "Display name of category")
     pass
 
 class BudgetUpdate(BaseModel):
@@ -73,7 +74,7 @@ class BudgetResponse(BaseModel):
 
 # ===== Budget Category =====
 class BudgetCategoryBase(BaseModel):
-    user_category_id: UUID = Field(..., description="User category ID")
+    # user_category_id: UUID = Field(..., description="User category ID")
     allocated_amount: Decimal = Field(..., ge=0, description="Allocated amount for this category")
 
     @field_validator('allocated_amount')
@@ -84,6 +85,7 @@ class BudgetCategoryBase(BaseModel):
         return v
 
 class BudgetCategoryCreate(BudgetCategoryBase):
+    category_display_name: str = Field(..., max_length=100, description="Display name of the category")
     pass
 
 class BudgetCategoryUpdate(BaseModel):
@@ -102,6 +104,7 @@ class BudgetCategoryResponse(BaseModel):
     BudgetCategoryID: UUID
     BudgetID: UUID
     UserCategoryID: UUID
+    category_display_name: str
     allocated_amount: Decimal
     spent_amount: Decimal
     CreatedAt: datetime
@@ -146,7 +149,7 @@ class BudgetVsActualResponse(BaseModel):
     summary: Dict[str, Any] = Field(..., description="Overall summary statistics")
     categories: List[BudgetCategoryOverview]
     spending_trend: List[Dict[str, Any]] = Field(..., description="Daily/weekly spending trend")
-    alerts: List[str] = Field(..., description="Budget alerts and warnings")
+    alerts: Optional[List[str]] = Field(..., description="Budget alerts and warnings")
 
 class BudgetPerformanceMetrics(BaseModel):
     """Budget performance metrics"""

@@ -18,7 +18,7 @@ from schemas.budget_schema import (
     BudgetCategoryResponse,
     BudgetOverviewResponse,
     BudgetVsActualResponse,
-    BudgetPerformanceMetrics,
+    # BudgetPerformanceMetrics,
     BudgetAnalysisRequest,
     BudgetComparisonRequest
 )
@@ -265,26 +265,26 @@ def get_budget_vs_actual(
     
     return comparison
 
-@router.get("/{budget_id}/performance", response_model=BudgetPerformanceMetrics)
-def get_budget_performance(
-    budget_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
-):
-    """Get budget performance metrics and analysis"""
-    metrics = budget_crud.get_budget_performance_metrics(
-        db=db,
-        user_id=current_user.UserID,
-        budget_id=budget_id
-    )
+# @router.get("/{budget_id}/performance", response_model=BudgetPerformanceMetrics)
+# def get_budget_performance(
+#     budget_id: UUID,
+#     db: Session = Depends(get_db),
+#     current_user: dict = Depends(get_current_user)
+# ):
+#     """Get budget performance metrics and analysis"""
+#     metrics = budget_crud.get_budget_performance_metrics(
+#         db=db,
+#         user_id=current_user.UserID,
+#         budget_id=budget_id
+#     )
     
-    if not metrics:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Không tìm thấy ngân sách."
-        )
+#     if not metrics:
+#         raise HTTPException(
+#             status_code=status.HTTP_404_NOT_FOUND,
+#             detail="Không tìm thấy ngân sách."
+#         )
     
-    return metrics
+#     return metrics
 
 @router.post("/{budget_id}/sync")
 def sync_budget_spending(
