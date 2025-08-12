@@ -1,36 +1,40 @@
-# income.py
-from sqlalchemy import Column, String, Boolean, ForeignKey, DateTime, Integer
+# models/chatbot.py
+from sqlalchemy import Column, String, DateTime, Boolean, Integer, ForeignKey, Float, Text
 from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER
+from sqlalchemy.orm import relationship
 from database import Base
-from datetime import datetime, timezone
+from datetime import datetime
+import uuid
+
 class ChatSession(Base):
     __tablename__ = "ChatSessions"
-    SessionID = Column(UNIQUEIDENTIFIER, primary_key=True)
-    UserID = Column(UNIQUEIDENTIFIER, ForeignKey("Users.UserID"))
+    __table_args__ = {'extend_existing': True}
+
+    SessionID = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4)
+    UserID = Column(UNIQUEIDENTIFIER, nullable=False)
     SessionName = Column(String(255))
-    StartedAt = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    StartedAt = Column(DateTime, default=datetime.utcnow)
     EndedAt = Column(DateTime)
     IsActive = Column(Boolean, default=True)
     MessageCount = Column(Integer, default=0)
+    
+    # Relationship to messages
+    # messages = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan")
 
 class ChatMessage(Base):
     __tablename__ = "ChatMessages"
-    MessageID = Column(UNIQUEIDENTIFIER, primary_key=True)
-    SessionID = Column(UNIQUEIDENTIFIER, ForeignKey("ChatSessions.SessionID"))
-    UserID = Column(UNIQUEIDENTIFIER, ForeignKey("Users.UserID"))
-    MessageType = Column(String(20), nullable=False)
-    Content = Column(String, nullable=False)
+    __table_args__ = {'extend_existing': True}
+
+    MessageID = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4)
+    SessionID = Column(UNIQUEIDENTIFIER, nullable=False)
+    UserID = Column(UNIQUEIDENTIFIER, nullable=False)
+    MessageType = Column(String(20), nullable=False)  # 'user', 'bot', 'system'
+    Content = Column(Text, nullable=False)
     Intent = Column(String(50))
+    Entities = Column(Text)  # JSON string for storing extracted entities
+    ConfidenceScore = Column(Float)
     ActionTaken = Column(String(50))
     CreatedAt = Column(DateTime, default=datetime.utcnow)
-
-# thêm ChatbotTrainingData (25/7/25 Sơn)
-class ChatbotTrainingData(Base):
-    __tablename__ = "chatbot_training_data"
-    id = Column("TrainingID", String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column("UserID", String, ForeignKey("users.UserID"), nullable=False)
-    question = Column("Question", Text, nullable=False)
-    intent = Column("Intent", String(50), nullable=False)
-    entities = Column("Entities", Text)
-    confidence_score = Column("ConfidenceScore", Float)
-    timestamp = Column("Timestamp", DateTime, default=datetime.utcnow)
+    
+    # Relationship back to session
+    # session = relationship("ChatSession", back_populates="messages")
