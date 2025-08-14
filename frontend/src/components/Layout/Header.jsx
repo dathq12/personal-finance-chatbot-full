@@ -8,17 +8,18 @@ const Header = () => (
       <Link to="/dashboard">
         <LogoIcon/>
       </Link>
+      
     </div>
-    <h1 className="text-lg text-white font-bold">INVIDUAL AI FINANCE</h1>
+    <h1 className="text-lg text-white font-bold">AI Finance Magement</h1>
     <div className="flex items-center gap-4">
       {/* <div className="flex items-center space-x-2">
         <FiBell className="text-black" size={20} />
       </div> */}
-      <div className="flex items-center space-x-2">
+      {/* <div className="flex items-center space-x-2">
         <Link to="/account">
           <FiUser className="text-white" size={20}/>
         </Link>
-      </div>
+      </div> */}
     </div>
   </div>
 );

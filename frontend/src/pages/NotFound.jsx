@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 function NotFound() {
   return (
-    <div className="min-h-screen bg-[#121212] text-white p-6 space-y-6">
+    <div className="h-dvh bg-[#121212] text-white p-6 space-y-6">
       <div style={styles.container}>
         <h1 style={styles.code}>404</h1>
         <p style={styles.message}>Trang bạn tìm kiếm không tồn tại.</p>
@@ -13,6 +13,7 @@ function NotFound() {
     </div>
   );
 }
+
 
 const styles = {
   container: {

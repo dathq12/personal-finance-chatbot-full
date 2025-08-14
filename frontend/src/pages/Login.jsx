@@ -20,23 +20,45 @@ const Login = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-    useEffect(() => {
-    const saved  = localStorage.getItem('rememberedAccount');
-    if (saved) {
-      const parsed = JSON.parse(atob(saved));
+
+const account = { email, password };
+
+// Lấy ra trong useEffect
+useEffect(() => {
+  const saved = localStorage.getItem('rememberedAccount');
+  console.log(saved);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
       setEmail(parsed.email);
       setPassword(parsed.password);
       setRememberMe(true);
+    } catch (err) {
+      console.error("rememberedAccount không phải JSON hợp lệ:", err);
+      localStorage.removeItem('rememberedAccount'); // xoá dữ liệu cũ hỏng
     }
-  }, []);
+  }
+}, []);
 
+  //   useEffect(() => {
+  //   const saved  = localStorage.getItem('rememberedAccount');
+  //   if (saved) {
+  //     const parsed = JSON.parse(atob(saved));
+  //     setEmail(parsed.email);
+  //     setPassword(parsed.password);
+  //     setRememberMe(true);
+  //   }
+  // }, []);
+
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
     if (rememberMe) {
-      const encoded = btoa(JSON.stringify({ email, password }));
-      localStorage.setItem('rememberedAccount', encoded);
+      // const encoded = btoa(JSON.stringify({ email, password }));
+      localStorage.setItem('rememberedAccount', JSON.stringify(account));
+      
     } else {
       localStorage.removeItem('rememberedAccount');
     }
@@ -52,12 +74,12 @@ const Login = () => {
   };
 
   return (
-    <div className="p-6 bg-black text-white min-h-screen space-y-6 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-[#121212] p-8 rounded-xl shadow">
+    <div className="h-dvh p-6 bg-black text-white  space-y-6 flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-[#1e1e1e] p-8 rounded-xl shadow">
         <div className="flex items-end justify-center space-x-2 mb-6">
           <LogoIcon className="w-8 h-8" />
           <h1 className="text-xl font-bold flex items-center gap-1">
-            Chào mừng trở lại
+            AI FinanceManager xin chào
             <span className="text-2xl">👋</span>
           </h1>
         </div>

@@ -6,10 +6,11 @@ import Layout from "../components/Layout/Layout";
 import Select from "../components/ui/selection";
 
 
+
 export default function Analytics() {
     return (
         <Layout>
-            <div className="p-6 bg-black text-white min-h-screen space-y-6">
+            <div className="p-6 bg-black text-white  space-y-6">
                 <h1 className="text-3xl font-bold">Analytics</h1>
 
                 {/* Filters */}

@@ -87,7 +87,7 @@ export default function CreateBudget() {
       // params.append('sort_order', 'desc');
 
 
-      const res = await API.get(`/categories/my-categories`, {
+      const res = await API.get(`/categories/my-categories?category_type=expense`, {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: 'application/json',
@@ -115,7 +115,7 @@ export default function CreateBudget() {
   });
 
   const handleAddCategory = () => {
-    if (!formData2.display_name || !formData2.user_category_id) {
+    if (!formData2.display_name) {
       console.warn("[handleAddCategory] Thiếu dữ liệu => Không thêm");
       return;
     }
@@ -218,7 +218,7 @@ export default function CreateBudget() {
 
       for (const cat of entries2) {
         const payload = {
-          user_category_id: cat.user_category_id,
+          category_display_name: cat.display_name,
           allocated_amount: cat.amount
         };
 
@@ -250,8 +250,10 @@ export default function CreateBudget() {
       // 4️⃣ Thông báo thành công
       if (allSuccess) {
         alert("✅ Budget đã được tạo thành công!");
+        navigate("/budget"); 
       } else {
         alert("⚠ Budget tạo thành công nhưng một số category bị lỗi.");
+        navigate("/budget"); 
       }
 
     } catch (err) {
@@ -479,6 +481,7 @@ export default function CreateBudget() {
                   </button>
                 </div>
               </div>
+              
             </div>
           </div>
         );
@@ -489,7 +492,7 @@ export default function CreateBudget() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-black text-white p-8">
+      <div className="h-dvh bg-black text-white p-8">
         <div className="max-w-3xl mx-auto">
           {/* Title */}
           <h1 className="text-2xl font-bold">Create New Budget</h1>

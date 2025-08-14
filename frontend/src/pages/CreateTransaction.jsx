@@ -57,8 +57,13 @@ export default function CreateTransactionForm() {
       }
 
       console.log("Success:", res.data);
+      alert("✅ Transaction đã được tạo thành công!");
+      navigate("/manual-input"); 
+
     } catch (err) {
       console.error(err);
+      alert("❌ Không thể tạo Transaction. Vui lòng thử lại.");
+      navigate("/manual-input"); 
     }
   };
 
@@ -137,12 +142,13 @@ export default function CreateTransactionForm() {
         throw new Error("Tạo category thất bại");
       }
 
+
       alert("Tạo category thành công");
       setIsOpen(false);
       setName("");
       setType("income");
       // gọi lại fetch danh sách category nếu cần:
-      fetchCategories && fetchCategories();
+      fetchCategory();
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || err.message || "Đã có lỗi");
@@ -226,14 +232,14 @@ export default function CreateTransactionForm() {
                       placeholder="0.00"
                     />
                     <div className="flex gap-2 mt-2">
-                      {[10, 25, 50, 100].map((val) => (
+                      {[100000, 250000, 500000, 1000000].map((val) => (
                         <button
                           key={val}
                           type="button"
                           onClick={() => setForm({ ...form, amount: val })}
                           className="px-3 py-1 bg-[#2a2a2a] rounded hover:bg-[#3a3a3a]"
                         >
-                          ${val}
+                          {val} VNĐ
                         </button>
                       ))}
                     </div>
@@ -290,38 +296,22 @@ export default function CreateTransactionForm() {
                           </label>
                           <div className="flex justify-center items-cente gap-4">
                             <select
-                              onChange={handleChange}
-                              className="flex h-10 w-full rounded-md border border-gray-700 bg-[#0f0f0f] px-3 py-2 text-sm"
-                            >
-                              {entries.length === 0 ? (
-                                <option disabled>No category found. Add new category!</option>
-                              ) : (
-                                entries.map((entry) => (
-                                  <option key={entry.id || entry.display_name} value={entry.display_name}>
-                                    {entry.display_name}
-                                  </option>
-                                ))
-                              )}
-                            </select>
-                            {/* <select
-                              id="category_display_name"
                               name="category_display_name"
                               value={form.category_display_name}
                               onChange={handleChange}
-                              className="w-2/3 flex h-10 w-full rounded-md border border-gray-700 bg-[#0f0f0f] px-3 py-2 text-sm"
+                              className="flex h-10 w-full rounded-md border border-gray-700 bg-[#0f0f0f] px-3 py-2 text-sm"
                             >
-                              <option value="">Select category</option>
-                              <option value="Thu nhập">Thu nhập</option>
-                              <option value="Transportation">Transportation</option>
-                              <option value="Entertainment">Entertainment</option>
-                              <option value="Utilities">Utilities</option>
-                              <option value="Housing">Housing</option>
-                              <option value="Healthcare">Healthcare</option>
-                              <option value="Shopping">Shopping</option>
-                              <option value="Education">Education</option>
-                              <option value="Insurance">Insurance</option>
-                              <option value="Other">Other</option>
-                            </select> */}
+                              <option value="" disabled>
+                                {entries.length === 0 ? "No category found. Add new category!" : "Select category"}
+                              </option>
+                              {entries.map((entry) => (
+                                <option key={entry.id || entry.display_name} value={entry.display_name}>
+                                  {entry.display_name}
+                                </option>
+                              ))}
+                            </select>
+
+
                             <button
                               type="button"
                               onClick={() => setIsOpen(true)}
@@ -443,51 +433,11 @@ export default function CreateTransactionForm() {
               )}
 
               {/* {activeTab === 2 && (
-                <div className="mt-2 space-y-6">
-                  <div className="rounded-lg border border-gray-700 bg-[#1a1a1a] text-white shadow-sm">
-                    <div className="flex flex-col space-y-1.5 p-6">
-                      <h3 className="text-2xl font-semibold leading-none tracking-tight">
-                        Advanced Options
-                      </h3>
-                      <p className="text-sm text-gray-400">
-                        Set up recurring transactions and tags
-                      </p>
-                    </div>
-
-                    <div className="p-6 pt-0 space-y-6">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="recurring"
-                          className="h-4 w-4 rounded-sm border border-gray-500 bg-transparent text-white focus:ring-2 focus:ring-blue-500"
-                        />
-                        <label htmlFor="recurring" className="text-sm font-medium">
-                          This is a recurring transaction
-                        </label>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Tags</label>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            placeholder="Add a tag"
-                            className="flex h-10 w-full rounded-md border border-gray-700 bg-[#0f0f0f] px-3 py-2 text-sm"
-                          />
-                          <button
-                            type="button"
-                            className="h-10 px-4 rounded-md border border-gray-700 bg-[#2a2a2a] hover:bg-[#3a3a3a] text-sm font-medium"
-                          >
-                            Add
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                
               )} */}
             </div>
 
+            {/* Buttons */}
             {/* Buttons */}
             <div className="p-6">
               <div className="flex justify-end gap-4">
@@ -501,12 +451,25 @@ export default function CreateTransactionForm() {
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="h-10 px-4 py-2 rounded-md bg-white text-black hover:bg-gray-200 text-sm font-medium"
-                >
-                  Add Transaction
-                </button>
+
+                {activeTab === 0 && (
+                  <button
+                    type="button"
+                    className="h-10 px-4 py-2 rounded-md bg-white text-black hover:bg-gray-200 text-sm font-medium"
+                    onClick={() => setActiveTab(1)}
+                  >
+                    Next
+                  </button>
+                )}
+
+                {activeTab === 1 && (
+                  <button
+                    type="submit"
+                    className="h-10 px-4 py-2 rounded-md bg-white text-black hover:bg-gray-200 text-sm font-medium"
+                  >
+                    Submit
+                  </button>
+                )}
               </div>
             </div>
           </div>
