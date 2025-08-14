@@ -8,7 +8,11 @@ params = urllib.parse.quote_plus(
     "SERVER=DESKTOP-2SS6FHK\\SQLEXPRESS;"
     "DATABASE=FinanceChatbotDB;"
     "Trusted_Connection=yes;"
+    "TrustServerCertificate=yes;"
+    "MARS_Connection=yes;"
+    "charset=utf8;"
 )
+
 
 # Lấy URL kết nối từ biến môi trường
 # params = urllib.parse.quote_plus(settings.DATABASE_URL)

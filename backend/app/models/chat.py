@@ -1,5 +1,5 @@
 # models/chatbot.py
-from sqlalchemy import Column, String, DateTime, Boolean, Integer, ForeignKey, Float, Text
+from sqlalchemy import Column, String, DateTime, Boolean, Integer, ForeignKey, Float, Text,UnicodeText
 from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER
 from sqlalchemy.orm import relationship
 from database import Base
@@ -29,7 +29,7 @@ class ChatMessage(Base):
     SessionID = Column(UNIQUEIDENTIFIER, nullable=False)
     UserID = Column(UNIQUEIDENTIFIER, nullable=False)
     MessageType = Column(String(20), nullable=False)  # 'user', 'bot', 'system'
-    Content = Column(Text, nullable=False)
+    Content = Column(UnicodeText, nullable=False)
     Intent = Column(String(50))
     Entities = Column(Text)  # JSON string for storing extracted entities
     ConfidenceScore = Column(Float)

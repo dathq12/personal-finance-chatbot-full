@@ -6,7 +6,6 @@ from app.models import *
 from app.routes import auth_routes,transaction_routes, category_routes ,budget_routes , chatbot_routes
 # ,user_routes 
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
@@ -16,6 +15,13 @@ async def lifespan(app: FastAPI):
 
 # ✅ chỉ tạo app 1 lần duy nhất
 app = FastAPI(lifespan=lifespan)
+
+@app.middleware("http")
+async def add_utf8_header(request, call_next):
+    response = await call_next(request)
+    if response.headers.get("content-type", "").startswith("application/json"):
+        response.headers["content-type"] = "application/json; charset=utf-8"
+    return response
 
 # ✅ Middleware
 app.add_middleware(
