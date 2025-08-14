@@ -30,9 +30,9 @@ const Chatbot = () => {
 
   return (
     <Layout>
-  <div className="flex w-full h-dvh overflow-hidden">
+  <div className="min-h-screen bg-[#121212] text-white p-6 space-y-6 flex w-full h-dvh overflow-hidden">
       
-        <div className="flex-1 flex flex-col h-full bg-white max-h-dvh">
+        <div className="flex-1 flex flex-col h-full max-h-dvh">
           {/* Khu vực tin nhắn */}
           <div className="flex-1 overflow-y-auto py-4 px-6 space-y-4 flex flex-col w-full mx-auto overflow-x-hidden" style={{ scrollbarGutter: 'stable' }}>
             {messages.map((msg, i) => (
@@ -51,7 +51,7 @@ const Chatbot = () => {
           </div>
 
           {/* Input nhập tin nhắn */}
-          <div className="border-t p-4 bg-white flex items-center sticky bottom-0 z-10">
+          <div className="border-t border-t-gray-700 p-4 flex items-center sticky bottom-0 z-10">
             <input
               type="text"
               placeholder="Nhập tin nhắn..."

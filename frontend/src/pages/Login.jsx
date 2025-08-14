@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
 import { useEffect } from 'react';
 
-import LogoIcon from '../components/Authen/LogoIcon';
+import LogoIcon from '../components/ui/LogoIcon';
 import AuthHeader from '../components/Authen/AuthHeader';
 import TextInput from '../components/Authen/TextInput';
 import CheckboxWithLabel from '../components/Authen/CheckboxWithLabel';
 import SubmitButton from '../components/Authen/SubmitButton';
 import AuthFooter from '../components/Authen/AuthFooter';
+import { Input } from '../components/ui/input';
 
 
 
@@ -42,25 +43,31 @@ const Login = () => {
 
 
     try {
-      // const res = await API.post('/auth/login', { email, password });
-      // localStorage.setItem('token', res.data.token);
-      navigate('/chatbot');
+      const res = await API.post('/auth/login', { email, password });
+      sessionStorage.setItem("token", res.data.access_token);
+      navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.detail || 'Đăng nhập thất bại.');
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
-      <div className="max-w-md w-full bg-white p-8 rounded-xl shadow">
-        <LogoIcon />
-        <AuthHeader title="Chào mừng trở lại" />
+    <div className="p-6 bg-black text-white min-h-screen space-y-6 flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-[#121212] p-8 rounded-xl shadow">
+        <div className="flex items-end justify-center space-x-2 mb-6">
+          <LogoIcon className="w-8 h-8" />
+          <h1 className="text-xl font-bold flex items-center gap-1">
+            Chào mừng trở lại
+            <span className="text-2xl">👋</span>
+          </h1>
+        </div>
+        
 
         {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <TextInput type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <TextInput type="password" placeholder="Mật khẩu" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input type="password" placeholder="Mật khẩu" value={password} onChange={(e) => setPassword(e.target.value)} />
 
           <div className="flex items-center justify-between">
             <CheckboxWithLabel label="Ghi nhớ tôi" checked={rememberMe} onChange={() => setRememberMe(!rememberMe)} />

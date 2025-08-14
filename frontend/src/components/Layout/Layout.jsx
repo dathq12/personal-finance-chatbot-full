@@ -2,7 +2,7 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 
 const Layout = ({ children }) => (
-  <div className="h-dvh flex flex-col bg-gray-50">
+  <div className="min-h-screen bg-[#121212] text-white h-dvh flex flex-col bg-gray-50">
     <Header />
 
     <div className="flex flex-1 min-h-0">

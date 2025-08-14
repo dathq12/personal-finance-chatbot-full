@@ -1,8 +1,8 @@
 -- DATABASE SCHEMA: HỆ THỐNG QUẢN LÝ TÀI CHÍNH CÁ NHÂN - SQL SERVER
 -- ===================================================================
 
--- CREATE DATABASE FinanceChatbotDB;
--- USE FinanceChatbotDB;
+CREATE DATABASE FinanceChatbotDB;
+USE FinanceChatbotDB;
 
 -- 1. BẢNG QUẢN LÝ NGƯỜI DÙNG
 -- ===================================================================
