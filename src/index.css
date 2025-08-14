@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1); /* Đảo màu (đen → trắng) */
+  cursor: pointer;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none; /* Chrome, Edge, Safari */
+}
+.scrollbar-hidden {
+  scrollbar-width: none; /* Firefox */
+}
