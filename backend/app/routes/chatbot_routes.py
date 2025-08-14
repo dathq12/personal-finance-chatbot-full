@@ -1,5 +1,6 @@
 # routers/chatbot.py
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.encoders import jsonable_encoder
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -24,12 +25,26 @@ from schemas.chat_schema import (
 from crud import chatbot_crud
 from services.gpt_service import chatbot_service
 from auth.auth_dependency import get_current_user
+from fastapi.responses import JSONResponse
+import json
 
 router = APIRouter(
     prefix="/chat",
     tags=["chatbot"],
     dependencies=[Depends(HTTPBearer())]
 )
+
+
+# Thêm custom JSON encoder để đảm bảo UTF-8
+class UnicodeJSONResponse(JSONResponse):
+    def render(self, content) -> bytes:
+        return json.dumps(
+            content,
+            ensure_ascii=False,  # Quan trọng: không escape unicode
+            allow_nan=False,
+            indent=None,
+            separators=(",", ":"),
+        ).encode("utf-8")
 
 # Chat Session Endpoints (unchanged)
 @router.post("/sessions", response_model=ChatSessionResponse, status_code=status.HTTP_201_CREATED)
@@ -254,13 +269,17 @@ async def chat_interact(
             session_id=session.SessionID
         )
         
-        return ChatInteractionResponse(
-            session_id=session.SessionID,
-            user_message=user_message,
-            bot_response=bot_message,
-            session_info=updated_session,
-            action_performed=action_data
+        response_data = ChatInteractionResponse(
+        session_id=session.SessionID,
+        user_message=user_message,
+        bot_response=bot_message,
+        session_info=updated_session,
+        action_performed=action_data
         )
+
+        # Dùng jsonable_encoder để model chuyển thành dict trước
+        return UnicodeJSONResponse(content=jsonable_encoder(response_data))
+
         
     except Exception as e:
         # Log error and return fallback response
