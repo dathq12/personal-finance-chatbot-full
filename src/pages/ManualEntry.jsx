@@ -109,7 +109,7 @@ const ManualEntry = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-[#121212] text-white p-6 space-y-6">
+      <div className="h-dvh bg-[#121212] text-white p-6 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Transactions</h1>
           <div className="flex space-x-2">

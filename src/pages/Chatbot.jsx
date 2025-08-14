@@ -22,16 +22,18 @@ const Chatbot = () => {
     setInput('');
 
     try {
+      const token = sessionStorage.getItem("token");
       const response = await fetch('http://127.0.0.1:8000/chat/interact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'accept': 'application/json'
+          'accept': 'application/json',
+          'Authorization': `Bearer ${token}` // hoặc `${token}` nếu backend không yêu cầu Bearer
         },
         body: JSON.stringify({
-          session_id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+          session_id: '0df38433-daa0-4285-a020-1efb6a85cf2b',
           message: userMessage,
-          session_name: 'string'
+          session_name: 'TEST'
         })
       });
 
@@ -55,18 +57,17 @@ const Chatbot = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-[#121212] text-white p-6 space-y-6 flex w-full h-dvh overflow-hidden tailwind-scrollbar-hide">
+      <div className="h-dvh bg-[#121212] text-white p-6 space-y-6 flex w-full h-dvh overflow-hidden tailwind-scrollbar-hide">
         <div className="flex-1 flex flex-col h-full max-h-dvh">
           {/* Khu vực tin nhắn */}
           <div className="flex-1 overflow-y-auto py-4 px-6 space-y-4 flex flex-col w-full mx-auto overflow-x-hidden">
             {messages.map((msg, i) => (
               <div
                 key={i}
-                className={`px-4 py-2 rounded-xl text-sm whitespace-pre-wrap w-fit max-w-[80%] ${
-                  msg.type === 'bot'
-                    ? 'bg-gray-100 text-gray-800 self-start text-left'
-                    : 'bg-blue-600 text-white self-end text-right'
-                }`}
+                className={`px-4 py-2 rounded-xl text-sm whitespace-pre-wrap w-fit max-w-[80%] ${msg.type === 'bot'
+                  ? 'bg-gray-100 text-gray-800 self-start text-left'
+                  : 'bg-blue-600 text-white self-end text-right'
+                  }`}
               >
                 {msg.text}
               </div>

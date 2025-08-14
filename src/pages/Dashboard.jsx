@@ -118,7 +118,7 @@ const Dashboard = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-[#121212] text-white p-6 space-y-6">
+      <div className="h-dvh bg-[#121212] text-white p-6 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <div className="space-x-2">
@@ -134,7 +134,7 @@ const Dashboard = () => {
         </div>
 
         <div className="bg-[#1e1e1e] p-4 rounded space-y-4">
-          <h2 className="text-lg font-semibold">Filters</h2>
+          <h2 className="flex flex-row text-lg font-semibold">Filters</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
 
             <input
@@ -157,26 +157,27 @@ const Dashboard = () => {
               onFocus={(e) => e.target.type = "date"}
               onBlur={(e) => e.target.type = "text"}
             />
-          </div>
-          <div className="flex gap-2 pt-2">
-            <button
-              onClick={handleApplyFilters}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-1"
-            >
-              <FiFilter /> Apply Filters
-            </button>
-            <button
-              onClick={() => setFilters({
-                search: '',
-                category_display_name: '',
-                transaction_type: '',
-                date_from: '',
-                date_to: '',
-              })}
-              className="px-4 py-2 border border-gray-600 rounded"
-            >
-              Reset
-            </button>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={handleApplyFilters}
+                className=" bg-blue-600 hover:bg-blue-700 text-white px-4 rounded flex items-center gap-1"
+              >
+                <FiFilter /> Apply Filters
+              </button>
+              <button
+                onClick={() => setFilters({
+                  search: '',
+                  category_display_name: '',
+                  transaction_type: '',
+                  date_from: '',
+                  date_to: '',
+                })}
+                className="px-4 py-2 border border-gray-600 rounded"
+              >
+                Reset
+              </button>
+            </div>
           </div>
         </div>
 
@@ -292,10 +293,11 @@ const Dashboard = () => {
                 </div>
               </div>
             ))}
-            <button 
-            onClick={() => {
-                navigate("/budget");}}
-            className="w-full text-center text-sm text-blue-400">View all budgets</button>
+            <button
+              onClick={() => {
+                navigate("/budget");
+              }}
+              className="w-full text-center text-sm text-blue-400">View all budgets</button>
           </div>
         </div>
 

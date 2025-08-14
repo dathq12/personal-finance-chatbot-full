@@ -489,7 +489,7 @@ export default function CreateBudget() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-black text-white p-8">
+      <div className="h-dvh bg-black text-white p-8">
         <div className="max-w-3xl mx-auto">
           {/* Title */}
           <h1 className="text-2xl font-bold">Create New Budget</h1>

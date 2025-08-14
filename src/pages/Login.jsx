@@ -25,14 +25,18 @@ const account = { email, password };
 
 // Lấy ra trong useEffect
 useEffect(() => {
-  const saved = localStorage.getItem('rememberedAccount', JSON.stringify(account));
-  console.log (saved);
+  const saved = localStorage.getItem('rememberedAccount');
+  console.log(saved);
   if (saved) {
-    const parsed = JSON.parse(saved);
-    console.log (parsed);
-    setEmail(parsed.email);
-    setPassword(parsed.password);
-    setRememberMe(true);
+    try {
+      const parsed = JSON.parse(saved);
+      setEmail(parsed.email);
+      setPassword(parsed.password);
+      setRememberMe(true);
+    } catch (err) {
+      console.error("rememberedAccount không phải JSON hợp lệ:", err);
+      localStorage.removeItem('rememberedAccount'); // xoá dữ liệu cũ hỏng
+    }
   }
 }, []);
 
@@ -60,8 +64,8 @@ useEffect(() => {
 
 
     try {
-      // const res = await API.post('/auth/login', { email, password });
-      // sessionStorage.setItem("token", res.data.access_token);
+      const res = await API.post('/auth/login', { email, password });
+      sessionStorage.setItem("token", res.data.access_token);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.detail || 'Đăng nhập thất bại.');
@@ -69,7 +73,7 @@ useEffect(() => {
   };
 
   return (
-    <div className="p-6 bg-black text-white min-h-screen space-y-6 flex items-center justify-center px-4">
+    <div className="h-dvh p-6 bg-black text-white  space-y-6 flex items-center justify-center px-4">
       <div className="max-w-md w-full bg-[#1e1e1e] p-8 rounded-xl shadow">
         <div className="flex items-end justify-center space-x-2 mb-6">
           <LogoIcon className="w-8 h-8" />

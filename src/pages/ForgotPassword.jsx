@@ -28,7 +28,7 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="p-6 bg-black text-white min-h-screen space-y-6 flex items-center justify-center px-4">
+    <div className="h-dvh p-6 bg-black text-white  space-y-6 flex items-center justify-center px-4">
       <div className="max-w-md w-full bg-[#1e1e1e] p-8 rounded-xl shadow">
         <div className="flex items-end justify-center space-x-2 mb-6">
           <LogoIcon />

@@ -16,7 +16,7 @@ const Sidebar = () => {
   return (
     <aside className="w-64 bg-[#1e1e1e] text-white flex flex-col justify-between">
       <div>
-        <h1 className="text-xl font-bold px-4 py-6">FinanceManager</h1>
+        {/* <h1 className="text-xl font-bold px-4 py-6">FinanceManager</h1> */}
         <nav className="space-y-1">
           {navItems.map(({ icon: Icon, label, path, color }) => {
             const isActive = location.pathname === path;
