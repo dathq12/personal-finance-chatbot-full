@@ -101,6 +101,7 @@ const Dashboard = () => {
       const data = res.data;
       console.log("API data:", data);
 
+      
       // Giả sử API trả về mảng data
       setEntries(res.data.transaction || []);
       console.log('Entries set:', res.data.transaction);

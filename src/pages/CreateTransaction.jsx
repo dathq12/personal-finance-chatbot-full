@@ -139,6 +139,7 @@ export default function CreateTransactionForm() {
         throw new Error("Tạo category thất bại");
       }
 
+      
       alert("Tạo category thành công");
       setIsOpen(false);
       setName("");

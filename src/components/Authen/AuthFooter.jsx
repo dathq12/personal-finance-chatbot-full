@@ -7,4 +7,5 @@ const AuthFooter = ({ question, linkText, linkHref }) => (
   </p>
 );
 
+
 export default AuthFooter;

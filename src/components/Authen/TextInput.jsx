@@ -10,3 +10,4 @@ const TextInput = ({ type, placeholder, value, onChange }) => (
 );
 
 export default TextInput;
+

@@ -97,6 +97,7 @@ const Budget = () => {
         }
     };
 
+    
     // Load initial budgets when page mounts
     useEffect(() => {
         fetchInitialBudgets();

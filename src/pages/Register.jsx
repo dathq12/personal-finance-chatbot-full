@@ -26,6 +26,7 @@ const Register = () => {
       const response = await API.post('/auth/register', {
         full_name,
         email,
+        
         password,
       });
 

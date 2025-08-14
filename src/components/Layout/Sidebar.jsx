@@ -11,6 +11,7 @@ const navItems = [
 ];
 
 const Sidebar = () => {
+  
   const location = useLocation();
 
   return (

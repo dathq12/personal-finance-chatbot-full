@@ -14,6 +14,7 @@ function NotFound() {
   );
 }
 
+
 const styles = {
   container: {
     textAlign: 'center',

@@ -6,3 +6,4 @@ const CheckboxWithLabel = ({ label, checked, onChange }) => (
 );
 
 export default CheckboxWithLabel;
+

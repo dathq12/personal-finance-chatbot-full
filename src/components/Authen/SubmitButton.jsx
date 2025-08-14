@@ -8,3 +8,4 @@ const SubmitButton = ({ label }) => (
 );
 
 export default SubmitButton;
+

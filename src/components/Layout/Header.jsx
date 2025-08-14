@@ -8,6 +8,7 @@ const Header = () => (
       <Link to="/dashboard">
         <LogoIcon/>
       </Link>
+      
     </div>
     <h1 className="text-lg text-white font-bold">AI Finance Magement</h1>
     <div className="flex items-center gap-4">

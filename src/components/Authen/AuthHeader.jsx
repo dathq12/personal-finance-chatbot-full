@@ -5,3 +5,4 @@ const AuthHeader = ({ title }) => (
 );
 
 export default AuthHeader;
+

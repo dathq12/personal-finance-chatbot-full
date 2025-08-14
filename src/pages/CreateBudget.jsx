@@ -479,6 +479,7 @@ export default function CreateBudget() {
                   </button>
                 </div>
               </div>
+              
             </div>
           </div>
         );

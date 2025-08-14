@@ -37,6 +37,7 @@ const Chatbot = () => {
         })
       });
 
+      
       const data = await response.json();
 
       // Cập nhật tin nhắn bot từ API

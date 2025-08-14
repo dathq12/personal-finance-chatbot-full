@@ -97,6 +97,7 @@ const ManualEntry = () => {
     fetchTransactions();
   };
 
+  
   // Điều hướng tới trang tạo transaction mới
   const handleSave = () => {
     navigate("/create/transaction");
