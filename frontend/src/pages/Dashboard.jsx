@@ -101,6 +101,7 @@ const Dashboard = () => {
       const data = res.data;
       console.log("API data:", data);
 
+
       // Giả sử API trả về mảng data
       setEntries(res.data.transaction || []);
       console.log('Entries set:', res.data.transaction);
@@ -118,7 +119,7 @@ const Dashboard = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-[#121212] text-white p-6 space-y-6">
+      <div className="h-dvh bg-[#121212] text-white p-6 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <div className="space-x-2">
@@ -134,7 +135,7 @@ const Dashboard = () => {
         </div>
 
         <div className="bg-[#1e1e1e] p-4 rounded space-y-4">
-          <h2 className="text-lg font-semibold">Filters</h2>
+          <h2 className="flex flex-row text-lg font-semibold">Filters</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
 
             <input
@@ -157,26 +158,27 @@ const Dashboard = () => {
               onFocus={(e) => e.target.type = "date"}
               onBlur={(e) => e.target.type = "text"}
             />
-          </div>
-          <div className="flex gap-2 pt-2">
-            <button
-              onClick={handleApplyFilters}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-1"
-            >
-              <FiFilter /> Apply Filters
-            </button>
-            <button
-              onClick={() => setFilters({
-                search: '',
-                category_display_name: '',
-                transaction_type: '',
-                date_from: '',
-                date_to: '',
-              })}
-              className="px-4 py-2 border border-gray-600 rounded"
-            >
-              Reset
-            </button>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={handleApplyFilters}
+                className=" bg-blue-600 hover:bg-blue-700 text-white px-4 rounded flex items-center gap-1"
+              >
+                <FiFilter /> Apply Filters
+              </button>
+              <button
+                onClick={() => setFilters({
+                  search: '',
+                  category_display_name: '',
+                  transaction_type: '',
+                  date_from: '',
+                  date_to: '',
+                })}
+                className="px-4 py-2 border border-gray-600 rounded"
+              >
+                Reset
+              </button>
+            </div>
           </div>
         </div>
 
@@ -206,14 +208,30 @@ const Dashboard = () => {
           <Card className="bg-[#111] text-white">
             <CardContent className="p-4">
               <p>Savings Rate</p>
-              <p className="text-xl font-bold">
-                {dataStatitis?.total_expense
-                  ? (((dataStatitis.total_income - dataStatitis.total_expense) / dataStatitis.total_expense) * 100).toFixed(2) + '%'
-                  : '100%'}
-              </p>
-              <div className="w-full bg-gray-700 h-2 rounded mt-2">
-                <div className="h-2 bg-green-400 rounded" style={{ width: '36.7%' }}></div>
-              </div>
+              {dataStatitis?.total_income ? (
+                <>
+                  {(() => {
+                    const savingsRate = ((dataStatitis.total_income - dataStatitis.total_expense) / dataStatitis.total_income) * 100;
+                    const displayRate = savingsRate.toFixed(2) + '%';
+                    const barWidth = Math.min(Math.max(savingsRate, 0), 100) + '%'; // giới hạn 0-100%
+                    return (
+                      <>
+                        <p className="text-xl font-bold">{displayRate}</p>
+                        <div className="w-full bg-gray-700 h-2 rounded mt-2">
+                          <div className="h-2 bg-green-400 rounded" style={{ width: barWidth }}></div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </>
+              ) : (
+                <>
+                  <p className="text-xl font-bold">100%</p>
+                  <div className="w-full bg-gray-700 h-2 rounded mt-2">
+                    <div className="h-2 bg-green-400 rounded" style={{ width: '100%' }}></div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -233,7 +251,7 @@ const Dashboard = () => {
           ))}
         </div> */}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-4">
           {/* Recent Transactions */}
           <div className="bg-[#1e1e1e] p-4 rounded">
             <h2 className="text-lg font-semibold mb-1">Recent Transactions</h2>
@@ -270,7 +288,7 @@ const Dashboard = () => {
           </div>
 
           {/* Budget Status */}
-          <div className="bg-[#1e1e1e] p-4 rounded">
+          {/* <div className="bg-[#1e1e1e] p-4 rounded">
             <h2 className="text-lg font-semibold mb-1">Budget Status</h2>
             <p className="text-sm text-gray-400 mb-4">Your current budget utilization</p>
             {[
@@ -292,8 +310,12 @@ const Dashboard = () => {
                 </div>
               </div>
             ))}
-            <button className="w-full text-center text-sm text-blue-400">View all budgets</button>
-          </div>
+            <button
+              onClick={() => {
+                navigate("/budget");
+              }}
+              className="w-full text-center text-sm text-blue-400">View all budgets</button>
+          </div> */}
         </div>
 
 

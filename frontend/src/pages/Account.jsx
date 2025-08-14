@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Layout from '../components/Layout/Layout';
 import LogoIcon from '../components/ui/LogoIcon';
 
+
 const Account = () => {
   const [user, setUser] = useState({
     name: 'Hà Quang Đạt',
